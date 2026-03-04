@@ -1,0 +1,189 @@
+{
+  "projectType": "saas",
+  "projectName": "Kayston's Forge",
+  "projectDescription": "Privacy-first browser developer utilities suite with 47 tools for encoding, formatting, and data transformation",
+  "theme": "palm",
+  "primaryColor": "#13b882",
+  "lightColor": "#0e6154",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/tool-categories",
+              "features/command-palette",
+              "features/keyboard-shortcuts",
+              "features/history-favorites",
+              "features/pwa-offline"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guides/encoding-tools",
+              "guides/formatting-tools",
+              "guides/data-transformation",
+              "guides/generators",
+              "guides/privacy-security"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tools Reference",
+        "groups": [
+          {
+            "group": "Encoding & Encryption",
+            "pages": [
+              "tools/unix-time-converter",
+              "tools/json-format-validate",
+              "tools/base64-string",
+              "tools/base64-image",
+              "tools/jwt-debugger",
+              "tools/regexp-tester",
+              "tools/url-encode-decode",
+              "tools/url-parser",
+              "tools/cron-parser",
+              "tools/cert-decoder"
+            ]
+          },
+          {
+            "group": "Escaping & Entities",
+            "pages": [
+              "tools/html-entity",
+              "tools/backslash-escape",
+              "tools/uuid-ulid"
+            ]
+          },
+          {
+            "group": "Preview & Comparison",
+            "pages": [
+              "tools/html-preview",
+              "tools/text-diff"
+            ]
+          },
+          {
+            "group": "Format Converters",
+            "pages": [
+              "tools/yaml-to-json",
+              "tools/json-to-yaml",
+              "tools/number-base",
+              "tools/color-converter",
+              "tools/svg-to-css",
+              "tools/curl-to-code",
+              "tools/json-to-code",
+              "tools/hex-to-ascii",
+              "tools/ascii-to-hex"
+            ]
+          },
+          {
+            "group": "Code Beautifiers",
+            "pages": [
+              "tools/html-beautify",
+              "tools/css-beautify",
+              "tools/js-beautify",
+              "tools/erb-beautify",
+              "tools/less-beautify",
+              "tools/scss-beautify",
+              "tools/xml-beautify"
+            ]
+          },
+          {
+            "group": "Generators",
+            "pages": [
+              "tools/lorem-ipsum",
+              "tools/qr-code",
+              "tools/string-inspector",
+              "tools/random-string"
+            ]
+          },
+          {
+            "group": "Data Transformers",
+            "pages": [
+              "tools/json-to-csv",
+              "tools/csv-to-json",
+              "tools/hash-generator",
+              "tools/html-to-jsx",
+              "tools/markdown-preview",
+              "tools/sql-formatter",
+              "tools/list-splitter",
+              "tools/csv-to-sql",
+              "tools/list-compare",
+              "tools/text-separator",
+              "tools/string-case",
+              "tools/php-to-json",
+              "tools/json-to-php",
+              "tools/php-serializer",
+              "tools/php-unserializer",
+              "tools/line-sort"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/tool-system",
+              "architecture/state-management",
+              "architecture/storage"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/local-setup",
+              "development/adding-tools",
+              "development/testing",
+              "development/deployment"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/privacy-first",
+              "security/headers",
+              "security/dependencies"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "47 developer tools across 7 categories",
+    "Privacy-first: all processing runs client-side",
+    "PWA with offline support and installable",
+    "Command palette and extensive keyboard shortcuts",
+    "Tool history stored in IndexedDB",
+    "Static Next.js 14 export with React 18",
+    "Tailwind CSS with custom Solarized theme",
+    "Comprehensive test coverage (157 tests)"
+  ],
+  "publicApiSurface": [
+    "tools: ToolDefinition[] - Registry of all 47 tools",
+    "toolMap: Map<string, ToolDefinition> - Tool lookup by ID",
+    "processTool(toolId, input, options) - Core tool execution engine",
+    "categoryLabels - Tool category display names",
+    "KaystonsForgeDB - IndexedDB schema (history, favorites, settings)",
+    "useAppStore - Zustand UI state management",
+    "useHistory - Tool history persistence hooks",
+    "ToolWorkbench - Unified tool UI component",
+    "AppShell - Main layout with sidebar, header, command palette"
+  ]
+}
