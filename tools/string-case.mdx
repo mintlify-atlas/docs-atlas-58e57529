@@ -1,0 +1,275 @@
+---
+title: String Case Converter
+description: Convert between camelCase, snake_case, kebab-case, PascalCase, and more
+---
+
+## Overview
+
+The String Case Converter transforms text between common programming case styles. Intelligently parses existing casing and converts to the target format, handling transitions between all case styles.
+
+## Use Cases
+
+- **API Design**: Convert field names between conventions
+- **Code Migration**: Change variable naming conventions
+- **Database Schema**: Convert column names to snake_case
+- **URL Slugs**: Generate kebab-case slugs from titles
+- **Constant Generation**: Convert to SCREAMING_SNAKE_CASE
+- **Title Formatting**: Convert to Title Case for display
+
+## Input Format
+
+Any text in any case style:
+
+```
+helloWorld
+```
+
+```
+user_profile_settings
+```
+
+```
+HTTP-Response-Code
+```
+
+```
+This is a title
+```
+
+## Case Styles
+
+### camelCase (default)
+First word lowercase, subsequent words capitalized:
+```
+helloWorld
+userProfileSettings
+httpResponseCode
+```
+
+### PascalCase
+All words capitalized, no separators:
+```
+HelloWorld
+UserProfileSettings
+HttpResponseCode
+```
+
+### snake_case
+All lowercase, words separated by underscores:
+```
+hello_world
+user_profile_settings
+http_response_code
+```
+
+### kebab-case
+All lowercase, words separated by hyphens:
+```
+hello-world
+user-profile-settings
+http-response-code
+```
+
+### SCREAMING_SNAKE_CASE
+All uppercase, words separated by underscores:
+```
+HELLO_WORLD
+USER_PROFILE_SETTINGS
+HTTP_RESPONSE_CODE
+```
+
+### Title Case
+First letter of each word capitalized, spaces between:
+```
+Hello World
+User Profile Settings
+Http Response Code
+```
+
+## Output Format
+
+Converted string in target case style:
+
+```
+hello_world
+```
+
+## Examples
+
+<CodeGroup>
+```text Input: camelCase to snake_case
+userProfileSettings
+```
+
+```text Output (snake_case)
+user_profile_settings
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: snake_case to camelCase
+http_response_code
+```
+
+```text Output (camelCase)
+httpResponseCode
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: kebab-case to PascalCase
+user-profile-settings
+```
+
+```text Output (PascalCase)
+UserProfileSettings
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Title to SCREAMING_SNAKE_CASE
+Hello World Example
+```
+
+```text Output (SCREAMING_SNAKE_CASE)
+HELLO_WORLD_EXAMPLE
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: PascalCase to kebab-case
+HTTPResponseCode
+```
+
+```text Output (kebab-case)
+http-response-code
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Mixed to Title Case
+API_response_Data
+```
+
+```text Output (Title Case)
+Api Response Data
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Acronyms
+HTMLParser
+```
+
+```text Output (snake_case)
+html_parser
+```
+</CodeGroup>
+
+## Conversion Matrix
+
+| From → To | camelCase | PascalCase | snake_case | kebab-case | SCREAMING | Title |
+|-----------|-----------|------------|------------|------------|-----------|-------|
+| camelCase | - | ✓ | ✓ | ✓ | ✓ | ✓ |
+| PascalCase | ✓ | - | ✓ | ✓ | ✓ | ✓ |
+| snake_case | ✓ | ✓ | - | ✓ | ✓ | ✓ |
+| kebab-case | ✓ | ✓ | ✓ | - | ✓ | ✓ |
+| SCREAMING | ✓ | ✓ | ✓ | ✓ | - | ✓ |
+| Title | ✓ | ✓ | ✓ | ✓ | ✓ | - |
+
+## Implementation Details
+
+From `lib/tools/engine.ts:804-821`:
+
+```typescript
+case 'string-case': {
+  const words = input
+    .replace(/([a-z])([A-Z])/g, '$1 $2')  // Split camelCase
+    .replace(/[_\-]+/g, ' ')              // Replace _ and - with space
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase());
+  if (!words.length) return { output: '' };
+  switch (action) {
+    case 'pascal': return { output: words.map((w) => w[0].toUpperCase() + w.slice(1)).join('') };
+    case 'snake': return { output: words.join('_') };
+    case 'kebab': return { output: words.join('-') };
+    case 'screaming': return { output: words.join('_').toUpperCase() };
+    case 'title': return { output: words.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ') };
+    default: return { output: words[0] + words.slice(1).map((w) => w[0].toUpperCase() + w.slice(1)).join('') };
+  }
+}
+```
+
+**Word Splitting Algorithm**:
+1. Insert spaces before uppercase letters preceded by lowercase (camelCase split)
+2. Replace underscores and hyphens with spaces
+3. Trim and split on whitespace
+4. Convert all words to lowercase
+5. Apply target case transformation
+
+## Edge Cases
+
+### Acronyms
+```
+HTTPSConnection → https_connection
+```
+Consecutive capitals are treated as one word.
+
+### Numbers
+```
+version2API → version_2_api
+```
+Numbers are preserved as separate tokens.
+
+### Special Characters
+```
+user@name → username
+```
+Non-alphanumeric characters are removed (except _ and - in source).
+
+### Empty Input
+```
+(empty) → (empty)
+```
+Returns empty string.
+
+## Common Use Cases
+
+### JavaScript to Python
+```
+userFirstName → user_first_name
+```
+
+### JSON to Database
+```
+productSKU → product_sku
+```
+
+### URL Slug Generation
+```
+New Product Launch → new-product-launch
+```
+
+### Constants
+```
+maxRetryCount → MAX_RETRY_COUNT
+```
+
+### CSS Classes
+```
+primaryButton → primary-button
+```
+
+<Note>
+The String Case Converter uses a simple but effective algorithm that handles transitions between all common case styles without requiring knowledge of the source format.
+</Note>
+
+<Tip>
+For API field conversion, batch multiple fields by converting them one at a time, or use find-and-replace in your editor after converting a sample field name.
+</Tip>
+
+<Warning>
+The converter cannot distinguish between acronyms and normal words. "API" becomes "api" in snake_case, not "a_p_i". Manually adjust acronyms if needed.
+</Warning>

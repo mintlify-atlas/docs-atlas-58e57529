@@ -1,0 +1,331 @@
+---
+title: PHP to JSON
+description: Convert PHP serialized data and array syntax to JSON
+---
+
+## Overview
+
+The PHP to JSON converter deserializes PHP data formats into JSON. Supports both PHP serialize format and PHP array syntax, with proper handling of nested structures, objects, and type preservation.
+
+## Use Cases
+
+- **Data Migration**: Convert PHP session data to JSON
+- **API Integration**: Transform PHP responses for modern APIs
+- **Database Export**: Convert serialized PHP columns to JSON
+- **Legacy Systems**: Extract data from PHP serialize format
+- **Configuration Files**: Convert PHP config arrays to JSON
+- **Debugging**: Inspect PHP serialized data in readable format
+
+## Input Formats
+
+### PHP Serialized Format (default)
+```php
+a:3:{i:0;s:5:"apple";i:1;s:6:"banana";i:2;s:6:"cherry";}
+```
+
+```php
+a:2:{s:4:"name";s:4:"John";s:3:"age";i:30;}
+```
+
+```php
+O:4:"User":2:{s:4:"name";s:5:"Alice";s:5:"email";s:15:"alice@example.com";}
+```
+
+### PHP Array Syntax
+```php
+['apple', 'banana', 'cherry']
+```
+
+```php
+[
+  'name' => 'John',
+  'age' => 30,
+  'active' => true
+]
+```
+
+```php
+array(
+  'users' => array(
+    array('id' => 1, 'name' => 'Alice'),
+    array('id' => 2, 'name' => 'Bob')
+  )
+)
+```
+
+## Actions
+
+### Default (PHP Serialize)
+Deserialize PHP serialize format to JSON:
+```json
+[
+  "apple",
+  "banana",
+  "cherry"
+]
+```
+
+### From Array
+Parse PHP array syntax to JSON:
+```json
+{
+  "name": "John",
+  "age": 30,
+  "active": true
+}
+```
+
+## Output Format
+
+Formatted JSON with proper indentation:
+
+```json
+{
+  "name": "John",
+  "age": 30,
+  "email": "john@example.com",
+  "active": true,
+  "roles": [
+    "admin",
+    "user"
+  ]
+}
+```
+
+## Examples
+
+<CodeGroup>
+```php Input: Simple Array (Serialize)
+a:3:{i:0;s:5:"apple";i:1;s:6:"banana";i:2;s:6:"cherry";}
+```
+
+```json Output
+[
+  "apple",
+  "banana",
+  "cherry"
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Associative Array (Serialize)
+a:3:{s:4:"name";s:4:"John";s:3:"age";i:30;s:5:"email";s:16:"john@example.com";}
+```
+
+```json Output
+{
+  "name": "John",
+  "age": 30,
+  "email": "john@example.com"
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: PHP Array Syntax
+[
+  'name' => 'Alice',
+  'age' => 28,
+  'active' => true,
+  'roles' => ['admin', 'editor']
+]
+```
+
+```json Output (From Array Action)
+{
+  "name": "Alice",
+  "age": 28,
+  "active": true,
+  "roles": [
+    "admin",
+    "editor"
+  ]
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Nested Structure (Serialize)
+a:2:{s:4:"user";a:2:{s:2:"id";i:1;s:4:"name";s:5:"Alice";}s:8:"settings";a:2:{s:5:"theme";s:4:"dark";s:6:"locale";s:5:"en_US";}}
+```
+
+```json Output
+{
+  "user": {
+    "id": 1,
+    "name": "Alice"
+  },
+  "settings": {
+    "theme": "dark",
+    "locale": "en_US"
+  }
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: PHP Object (Serialize)
+O:4:"User":3:{s:2:"id";i:123;s:4:"name";s:5:"Alice";s:5:"email";s:15:"alice@example.com";}
+```
+
+```json Output
+{
+  "__class": "User",
+  "id": 123,
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Type Preservation
+a:5:{s:6:"string";s:5:"hello";s:7:"integer";i:42;s:5:"float";d:3.14;s:4:"bool";b:1;s:4:"null";N;}
+```
+
+```json Output
+{
+  "string": "hello",
+  "integer": 42,
+  "float": 3.14,
+  "bool": true,
+  "null": null
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Array Function Syntax
+array(
+  'product_id' => 101,
+  'name' => 'Laptop',
+  'specs' => array(
+    'ram' => '16GB',
+    'storage' => '512GB SSD'
+  )
+)
+```
+
+```json Output (From Array Action)
+{
+  "product_id": 101,
+  "name": "Laptop",
+  "specs": {
+    "ram": "16GB",
+    "storage": "512GB SSD"
+  }
+}
+```
+</CodeGroup>
+
+## PHP Serialize Format Reference
+
+### Type Markers
+- `N;` - NULL
+- `b:0;` or `b:1;` - Boolean
+- `i:123;` - Integer
+- `d:3.14;` - Float (double)
+- `s:5:"hello";` - String (length:value)
+- `a:2:{...}` - Array (count:elements)
+- `O:4:"User":2:{...}` - Object (class length:class name:count:properties)
+
+### Array Format
+```php
+a:2:{i:0;s:3:"foo";i:1;s:3:"bar";}
+```
+Breakdown:
+- `a:2` - Array with 2 elements
+- `{` - Start array
+- `i:0;` - Key (integer 0)
+- `s:3:"foo";` - Value (string "foo")
+- `i:1;` - Key (integer 1)
+- `s:3:"bar";` - Value (string "bar")
+- `}` - End array
+
+## Implementation Details
+
+From `lib/tools/engine.ts:754-761`:
+
+```typescript
+case 'php-to-json': {
+  if (action === 'from-array') {
+    const parsed = parsePhpArraySyntax(input);
+    return { output: stringify(parsed, true) };
+  }
+  const parsed = phpUnserialize(input);
+  return { output: stringify(parsed, true) };
+}
+```
+
+**PHP Unserialize** (`lib/tools/php-tools.ts:7-95`):
+```typescript
+export function phpUnserialize(input: string): PhpValue {
+  const text = input.trim();
+  let pos = 0;
+
+  function parse(): PhpValue {
+    const type = text[pos++];
+    if (pos < text.length && text[pos] === ':') pos++;
+
+    switch (type) {
+      case 'N': return null;
+      case 'b': return readUntil(';') === '1';
+      case 'i': return parseInt(readUntil(';'), 10);
+      case 'd': return parseFloat(readUntil(';'));
+      case 's': return readString();
+      case 'a': return readArray();
+      case 'O': return readObject();
+      default: throw new Error(`Unknown type '${type}'`);
+    }
+  }
+
+  return parse();
+}
+```
+
+**PHP Array Syntax Parser** (`lib/tools/php-tools.ts:163-237`):
+```typescript
+export function parsePhpArraySyntax(input: string): PhpValue {
+  const text = input.trim();
+  let pos = 0;
+
+  function parseVal(): PhpValue {
+    skip();
+    const ch = text[pos];
+
+    // Keywords
+    if (text.startsWith('null', pos)) { pos += 4; return null; }
+    if (text.startsWith('true', pos)) { pos += 4; return true; }
+    if (text.startsWith('false', pos)) { pos += 5; return false; }
+
+    // Numbers
+    if (ch === '-' || (ch >= '0' && ch <= '9')) return parseNumber();
+
+    // Strings
+    if (ch === "'" || ch === '"') return parseString();
+
+    // Arrays
+    if (ch === '[' || text.startsWith('array(', pos)) return parseArray();
+
+    throw new Error(`Unexpected token at position ${pos}`);
+  }
+
+  return parseVal();
+}
+```
+
+<Note>
+The PHP to JSON converter handles both modern short array syntax (`[]`) and legacy `array()` function syntax. Objects are converted to JSON objects with a special `__class` property preserving the class name.
+</Note>
+
+<Tip>
+For PHP session data, use the default (serialize) mode. For config files and code snippets with array syntax, use the "From Array" action.
+</Tip>
+
+<Warning>
+- The unserializer does not execute PHP code or instantiate classes
+- Private/protected properties in serialized objects are converted to regular properties
+- Custom serialization handlers (like `__sleep`, `__wakeup`) are not invoked
+- Very deeply nested structures may cause stack overflow
+</Warning>

@@ -1,0 +1,415 @@
+---
+title: Certificate Decoder (X.509)
+description: Decode and inspect X.509 SSL/TLS certificates with detailed information about subject, issuer, validity, and extensions
+---
+
+The Certificate Decoder tool parses X.509 certificates (SSL/TLS certificates) and displays their contents in a readable format. It extracts key information including subject, issuer, validity period, public key details, signature algorithm, and Subject Alternative Names (SANs).
+
+## Features
+
+- Pure JavaScript ASN.1 DER parser (no external dependencies)
+- PEM and raw Base64 input support
+- X.509 v1/v2/v3 certificate parsing
+- Subject and Issuer Distinguished Name (DN) extraction
+- Validity period and expiration checking
+- Public key algorithm and size detection
+- Subject Alternative Names (SAN) extraction
+- Serial number and signature algorithm display
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Certificate Inspection" icon="magnifying-glass">
+    Examine SSL/TLS certificates to verify identity and validity
+  </Card>
+  <Card title="Debugging HTTPS" icon="bug">
+    Troubleshoot certificate issues in web applications and APIs
+  </Card>
+  <Card title="Security Audits" icon="shield">
+    Review certificate properties during security assessments
+  </Card>
+  <Card title="Certificate Management" icon="certificate">
+    Analyze certificates before installation or renewal
+  </Card>
+</CardGroup>
+
+## Supported Formats
+
+### PEM Format (Recommended)
+
+Standard PEM-encoded certificate with headers:
+
+```
+-----BEGIN CERTIFICATE-----
+MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ
+RTESMBAGA1UEChMJQmFsdGltb3JlMRMwEQYDVQQLEwpDeWJlclRydXN0MSIwIAYD
+...
+-----END CERTIFICATE-----
+```
+
+### Raw Base64
+
+Base64-encoded DER without PEM headers:
+
+```
+MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ...
+```
+
+<Note>
+  The tool accepts both formats. PEM headers are automatically stripped if present.
+</Note>
+
+## Output Format
+
+The tool displays certificate details in a structured format:
+
+```
+Version:            v3
+Serial Number:      1a2b3c4d5e6f
+Signature Alg:      sha256WithRSAEncryption
+
+Subject:            CN=example.com, O=Example Inc, C=US
+Issuer:             CN=Example CA, O=Example Inc, C=US
+
+Not Before:         2024-01-01 00:00:00 UTC
+Not After:          2025-01-01 00:00:00 UTC
+
+Public Key:         rsaEncryption (2048 bits)
+
+Subject Alt Names:
+  DNS:example.com
+  DNS:www.example.com
+  DNS:api.example.com
+  IP:192.0.2.1
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Basic Certificate">
+    Decode a standard SSL/TLS certificate.
+
+    **Input (PEM):**
+    ```
+    -----BEGIN CERTIFICATE-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2a2rwplBQLzHPZe5TNJF
+    -----END CERTIFICATE-----
+    ```
+
+    **Output:**
+    ```
+    Version:            v3
+    Serial Number:      a1b2c3d4e5f6
+    Signature Alg:      sha256WithRSAEncryption
+
+    Subject:            CN=example.com, O=Example Inc, C=US
+    Issuer:             CN=Let's Encrypt Authority X3, O=Let's Encrypt, C=US
+
+    Not Before:         2024-01-15 10:30:00 UTC
+    Not After:          2024-04-15 10:30:00 UTC
+
+    Public Key:         rsaEncryption (2048 bits)
+
+    Subject Alt Names:
+      DNS:example.com
+      DNS:www.example.com
+    ```
+  </Tab>
+
+  <Tab title="Wildcard Certificate">
+    Certificate with wildcard domain.
+
+    **Output:**
+    ```
+    Version:            v3
+    Serial Number:      3f4e5d6c7b8a9
+    Signature Alg:      sha256WithRSAEncryption
+
+    Subject:            CN=*.example.com
+    Issuer:             CN=DigiCert SHA2 Secure Server CA
+
+    Not Before:         2024-02-01 00:00:00 UTC
+    Not After:          2025-02-01 23:59:59 UTC
+
+    Public Key:         rsaEncryption (2048 bits)
+
+    Subject Alt Names:
+      DNS:*.example.com
+      DNS:example.com
+    ```
+
+    <Note>
+      Wildcard certificates (`*.example.com`) cover all first-level subdomains but not the root domain or nested subdomains.
+    </Note>
+  </Tab>
+
+  <Tab title="Multi-Domain (SAN)">
+    Certificate covering multiple domains.
+
+    **Output:**
+    ```
+    Version:            v3
+    Serial Number:      9f8e7d6c5b4a3
+    Signature Alg:      sha256WithRSAEncryption
+
+    Subject:            CN=example.com
+    Issuer:             CN=Cloudflare Inc ECC CA-3
+
+    Not Before:         2024-01-01 00:00:00 UTC
+    Not After:          2024-12-31 23:59:59 UTC
+
+    Public Key:         id-ecPublicKey (256 bits)
+
+    Subject Alt Names:
+      DNS:example.com
+      DNS:www.example.com
+      DNS:api.example.com
+      DNS:cdn.example.com
+      DNS:staging.example.com
+    ```
+  </Tab>
+
+  <Tab title="Self-Signed">
+    Self-signed certificate (Subject = Issuer).
+
+    **Output:**
+    ```
+    Version:            v3
+    Serial Number:      1
+    Signature Alg:      sha256WithRSAEncryption
+
+    Subject:            CN=localhost, O=Development, C=US
+    Issuer:             CN=localhost, O=Development, C=US
+
+    Not Before:         2024-01-01 00:00:00 UTC
+    Not After:          2034-01-01 00:00:00 UTC
+
+    Public Key:         rsaEncryption (4096 bits)
+    ```
+
+    <Warning>
+      Self-signed certificates (Subject = Issuer) are not trusted by browsers without manual import. Use only for development/testing.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Certificate Fields
+
+### Version
+
+| Version | Features |
+|---------|----------|
+| v1 | Basic certificate (rare) |
+| v2 | Adds unique identifiers (obsolete) |
+| v3 | Supports extensions (standard) |
+
+Most modern certificates are v3.
+
+### Serial Number
+
+Unique identifier assigned by the Certificate Authority (CA). Displayed in hexadecimal.
+
+### Signature Algorithm
+
+Common algorithms:
+
+- `sha256WithRSAEncryption` - RSA with SHA-256 (most common)
+- `sha384WithRSAEncryption` - RSA with SHA-384 (higher security)
+- `sha512WithRSAEncryption` - RSA with SHA-512 (highest security)
+- `ecdsa-with-SHA256` - ECDSA with SHA-256 (modern, efficient)
+
+### Distinguished Name (DN)
+
+The Subject and Issuer fields use DN format:
+
+| Component | Name | Description |
+|-----------|------|-------------|
+| CN | Common Name | Domain or entity name |
+| O | Organization | Company or organization name |
+| OU | Organizational Unit | Department or division |
+| C | Country | Two-letter country code (ISO 3166) |
+| ST | State/Province | State or province name |
+| L | Locality | City name |
+
+Example: `CN=example.com, O=Example Inc, OU=IT, C=US, ST=California, L=San Francisco`
+
+### Public Key
+
+Shows the algorithm and key size:
+
+- **rsaEncryption (2048 bits)** - Standard RSA key
+- **rsaEncryption (4096 bits)** - High-security RSA key
+- **id-ecPublicKey (256 bits)** - Elliptic Curve key (P-256)
+- **id-ecPublicKey (384 bits)** - Elliptic Curve key (P-384)
+
+<Info>
+  ECDSA keys provide equivalent security with smaller key sizes: ECC 256-bit ≈ RSA 3072-bit
+</Info>
+
+### Subject Alternative Names (SAN)
+
+Modern certificates use SAN extensions to specify valid domains:
+
+- **DNS:** Domain names (`DNS:example.com`, `DNS:*.example.com`)
+- **IP:** IP addresses (`IP:192.0.2.1`, `IP:2001:db8::1`)
+- **email:** Email addresses (`email:admin@example.com`)
+
+## Implementation Details
+
+The tool includes a complete ASN.1 DER parser written in TypeScript:
+
+### Architecture
+
+From `lib/tools/cert-decoder.ts`:
+
+1. **Base64 Decode** - Convert PEM/Base64 to binary DER
+2. **DER Parser** - Parse binary ASN.1 structure
+3. **X.509 Extractor** - Extract certificate fields
+4. **DN Formatter** - Format Distinguished Names
+5. **OID Resolver** - Map OIDs to human names
+
+### OID Resolution
+
+Object Identifiers (OIDs) are mapped to readable names:
+
+```typescript
+const OID_NAMES: Record<string, string> = {
+  '2.5.4.3': 'CN',           // Common Name
+  '2.5.4.10': 'O',           // Organization
+  '2.5.4.11': 'OU',          // Organizational Unit
+  '2.5.4.6': 'C',            // Country
+  '1.2.840.113549.1.1.11': 'sha256WithRSAEncryption',
+  '1.2.840.10045.2.1': 'id-ecPublicKey',
+  '2.5.29.17': 'subjectAltName',
+  // ... 20+ more mappings
+};
+```
+
+### Source Code
+
+Implementation: `lib/tools/cert-decoder.ts:1-231`  
+Engine integration: `lib/tools/engine.ts:799-802`
+
+## Common Patterns
+
+### Extract from Browser
+
+1. Visit HTTPS site in browser
+2. Click padlock icon → Certificate
+3. Export as PEM format
+4. Paste into tool
+
+### Extract from Server
+
+Using OpenSSL:
+
+```bash
+# View remote certificate
+openssl s_client -connect example.com:443 -showcerts < /dev/null 2>/dev/null | openssl x509 -outform PEM
+
+# View local certificate file
+openssl x509 -in certificate.crt -text -noout
+
+# Convert DER to PEM
+openssl x509 -in certificate.der -inform DER -out certificate.pem -outform PEM
+```
+
+### Check Expiration
+
+Verify the "Not After" field to ensure the certificate hasn't expired.
+
+```
+Not Before:         2024-01-01 00:00:00 UTC
+Not After:          2025-01-01 00:00:00 UTC  ← Check this date
+```
+
+### Verify Domain Coverage
+
+Check that your domain appears in either:
+
+- **Subject CN** field
+- **Subject Alternative Names** list
+
+## Error Handling
+
+### Invalid Certificate
+
+```
+Invalid certificate: failed to base64-decode input.
+```
+
+**Fix:** Ensure input is valid Base64 or PEM format.
+
+### Parse Error
+
+```
+Invalid certificate: cannot parse DER structure.
+```
+
+**Fix:** Verify the certificate is X.509 format, not a private key or other file type.
+
+### Unexpected Structure
+
+```
+Invalid certificate: unexpected structure.
+```
+
+**Fix:** Certificate may be corrupted or in an unsupported format (e.g., PKCS#7, PKCS#12).
+
+## Security Notes
+
+<Warning>
+  **This tool DOES NOT verify signatures or trust chains.** It only decodes and displays certificate contents. For production certificate validation, use proper PKI validation with trusted root CA stores.
+</Warning>
+
+### What This Tool Does
+
+- ✅ Parses X.509 certificate structure
+- ✅ Extracts and displays fields
+- ✅ Shows expiration dates
+- ✅ Lists Subject Alternative Names
+
+### What This Tool Does NOT Do
+
+- ❌ Verify cryptographic signatures
+- ❌ Validate certificate trust chains
+- ❌ Check certificate revocation (CRL/OCSP)
+- ❌ Enforce certificate policies
+- ❌ Validate hostname matching
+
+## Certificate Types
+
+### Domain Validation (DV)
+
+Basic certificates verifying domain ownership:
+
+```
+Subject: CN=example.com
+Issuer: CN=Let's Encrypt Authority
+```
+
+### Organization Validation (OV)
+
+Includes organization details:
+
+```
+Subject: CN=example.com, O=Example Inc, C=US
+Issuer: CN=DigiCert SHA2 Secure Server CA
+```
+
+### Extended Validation (EV)
+
+Highest validation level with detailed organization info:
+
+```
+Subject: CN=example.com, O=Example Inc, 
+         STREET=123 Main St, L=San Francisco, 
+         ST=California, POSTAL=94102, C=US
+Issuer: CN=DigiCert EV RSA CA
+```
+
+## Related Tools
+
+- [Base64 String](/tools/base64-string) - Decode Base64-encoded certificates
+- [Hash Generator](/tools/hash-generator) - Verify certificate fingerprints
+- [JWT Debugger](/tools/jwt-debugger) - Decode JSON Web Tokens (different format)

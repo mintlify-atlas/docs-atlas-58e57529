@@ -1,0 +1,224 @@
+---
+title: Architecture Overview
+description: Comprehensive overview of Kayston's Forge architecture, Next.js 14 static export, and routing
+---
+
+Kayston's Forge is a privacy-first, browser-based developer utilities suite built with **Next.js 14 App Router** and exported as a fully static site. All processing runs client-side with no data leaving the browser.
+
+## Next.js 14 Static Export
+
+The application uses Next.js 14's `output: 'export'` mode to generate a fully static site:
+
+- **Build output**: `out/` directory contains pure HTML/CSS/JS
+- **No server runtime**: All pages are pre-rendered at build time
+- **Client-side only**: All tool processing happens in the browser
+- **Deployment**: Static files deployed to Vercel
+
+<Note>
+Using static export means server-side Next.js features (API routes, server actions, SSR) are not available. All functionality is implemented client-side.
+</Note>
+
+## Routing Architecture
+
+### App Router Structure
+
+The application uses Next.js 14's App Router with a streamlined layout:
+
+```
+app/
+├── page.tsx                    # Root redirects to default tool
+├── layout.tsx                  # Root layout (HTML structure)
+└── tools/
+    └── [toolId]/
+        └── page.tsx            # Dynamic tool page
+```
+
+### Route Generation
+
+All 47 tool routes are generated at build time using `generateStaticParams()`:
+
+```typescript
+// app/tools/[toolId]/page.tsx
+export async function generateStaticParams() {
+  return tools.map((tool) => ({ toolId: tool.id }));
+}
+```
+
+This generates static pages for:
+- `/tools/json-format-validate`
+- `/tools/base64-string`
+- `/tools/jwt-debugger`
+- ...and 44 more
+
+### Default Tool Redirect
+
+The root page (`app/page.tsx`) redirects to the default tool:
+
+```typescript
+import { redirect } from 'next/navigation';
+import { defaultToolId } from '@/lib/tools/registry';
+
+export default function HomePage() {
+  redirect(`/tools/${defaultToolId}`);
+}
+```
+
+Default tool: `json-format-validate`
+
+## Layout & Component Structure
+
+### Unified Layout Pattern
+
+All tool pages share a **single unified layout** — there are no per-tool page components. The entire UI is managed by `AppShell.tsx`:
+
+```
+components/
+└── layout/
+    └── AppShell.tsx           # Sidebar + Header + Workbench
+```
+
+`AppShell.tsx` is the top-level client component that renders:
+
+1. **Sidebar** — Tool navigation grouped by category
+2. **Header** — Search/command palette trigger
+3. **Workbench** — Unified tool UI (input/output/actions)
+4. **Command Palette** — Quick tool switching (Cmd+K)
+
+### Client-Side Rendering
+
+The application is entirely client-side rendered:
+
+- `app/layout.tsx` → Minimal HTML shell with fonts and theme CSS
+- `components/layout/AppShell.tsx` → Full interactive UI (marked `'use client'`)
+- `components/tools/ToolWorkbench.tsx` → Tool execution UI (marked `'use client'`)
+
+<Warning>
+All components that use React hooks (useState, useEffect, Zustand stores) must include the `'use client'` directive at the top of the file.
+</Warning>
+
+## Core Pattern: Registry → Engine → Workbench
+
+The entire tool system follows a three-file pattern:
+
+1. **Registry** (`lib/tools/registry.ts`) — Defines all 47 tools
+2. **Engine** (`lib/tools/engine.ts`) — Processes tool logic
+3. **Workbench** (`components/tools/ToolWorkbench.tsx`) — Unified UI
+
+```mermaid
+graph LR
+    A[Registry] --> B[generateStaticParams]
+    B --> C[/tools/json-format-validate]
+    C --> D[AppShell]
+    D --> E[ToolWorkbench]
+    E --> F[Engine.processTool]
+```
+
+See the [Tool System](/architecture/tool-system) page for detailed information.
+
+## Key Dependencies
+
+### Core Framework
+- `next@14` — App Router, static export
+- `react@18` — UI framework
+- `tailwindcss` — Styling with CSS custom properties
+
+### Tool Libraries
+- `crypto-js` — Hash generation (MD5, SHA-256, etc.)
+- `terser` — JavaScript minification
+- `js-yaml` — YAML parsing/generation
+- `papaparse` — CSV parsing
+- `sql-formatter` — SQL formatting
+- `marked` / `dompurify` — Markdown preview
+- `qrcode` / `jsqr` — QR code generation/decoding
+
+### State & Storage
+- `zustand` — UI state management
+- `dexie` — IndexedDB wrapper for history
+
+<Note>
+All dependencies are bundled into the client-side JavaScript. The initial bundle is ~513 kB due to all tool libraries loading on every page. Dynamic imports would reduce this.
+</Note>
+
+## Build & Deployment
+
+### Build Process
+
+```bash
+npm run build
+```
+
+1. Next.js compiles all TypeScript to JavaScript
+2. `generateStaticParams()` generates 47 tool pages
+3. Static HTML/CSS/JS output to `out/` directory
+4. Service worker (`public/sw.js`) copied for PWA support
+
+### Deployment
+
+Deployed to Vercel with:
+- **Headers** (`vercel.json`) — CSP, HSTS, security headers
+- **PWA** — Installable as standalone app
+- **Offline support** — Service worker caches assets
+
+### Security
+
+- **CodeQL SAST** — Automated code scanning
+- **npm audit** — Dependency vulnerability checks (critical-only)
+- **TruffleHog** — Secret scanning
+- **SBOM** — CycloneDX software bill of materials
+
+<Warning>
+`next@14` HIGH advisories (GHSA-9g9p, GHSA-h25m) do NOT apply to static export builds — both require server-side features.
+</Warning>
+
+## Performance
+
+### First Load
+- **JavaScript**: ~513 kB (gzipped)
+- **CSS**: ~12 kB
+- **Fonts**: DM Sans, Playfair Display, Fira Code (preloaded)
+
+### Runtime
+- **Processing**: All synchronous (runs on main thread)
+- **Storage**: IndexedDB for history (max 50 entries per tool)
+- **Caching**: Service worker caches static assets
+
+<Note>
+Heavy tools (like JS minification with Terser) may block the UI thread. Input size is limited to 5 MB per field to prevent freezing.
+</Note>
+
+## Theming
+
+Default theme: **Solarized Light**
+
+- Warm cream background (`#fdf6e3`)
+- Gold accent (`#b58900`)
+- CSS custom properties in `app/globals.css`
+- Dark theme CSS exists but UI toggle not implemented
+
+### Custom Properties
+
+```css
+--bg-primary: #fdf6e3;
+--bg-secondary: #eee8d5;
+--bg-tertiary: #e4ddc8;
+--text-primary: #073642;
+--text-secondary: #586e75;
+--text-muted: #93a1a1;
+--accent: #b58900;
+--border: #d4cbb0;
+--border-subtle: #e7e0cd;
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Tool System" icon="wrench" href="/architecture/tool-system">
+    Learn how the registry → engine → workbench pattern works
+  </Card>
+  <Card title="State Management" icon="database" href="/architecture/state-management">
+    Understand Zustand stores and localStorage persistence
+  </Card>
+  <Card title="Storage" icon="hard-drive" href="/architecture/storage">
+    Explore IndexedDB schema for history and favorites
+  </Card>
+</CardGroup>

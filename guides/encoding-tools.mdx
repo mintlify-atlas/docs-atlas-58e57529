@@ -1,0 +1,247 @@
+---
+title: Encoding & Encryption Tools
+description: Comprehensive guide to Kayston's Forge encoding, decoding, and cryptographic utilities including Base64, JWT, URL encoding, hashing, and certificate inspection.
+---
+
+## Overview
+
+Kayston's Forge provides a complete suite of encoding and cryptographic tools that run entirely in your browser. All processing is client-side, ensuring your sensitive data never leaves your machine.
+
+## Available Tools
+
+<CardGroup cols={2}>
+  <Card title="Unix Time Converter" icon="clock" href="/tools/unix-time-converter">
+    Convert between Unix timestamps (seconds/milliseconds) and human-readable dates. Displays local time, UTC, ISO format, and relative time.
+  </Card>
+  
+  <Card title="Base64 String Encode/Decode" icon="hashtag" href="/tools/base64-string">
+    Encode UTF-8 text to Base64 or decode Base64 strings back to text. Supports URL-safe Base64 encoding.
+  </Card>
+  
+  <Card title="Base64 Image Encode/Decode" icon="image" href="/tools/base64-image">
+    Convert images to Base64 data URLs or decode Base64 back to image content. Preview images inline.
+  </Card>
+  
+  <Card title="JWT Debugger" icon="key" href="/tools/jwt-debugger">
+    Inspect JSON Web Token headers and payloads without sending data to external servers. Shows claims, expiration time, and decoded structure.
+  </Card>
+  
+  <Card title="URL Encode/Decode" icon="link" href="/tools/url-encode-decode">
+    Encode and decode URL components. Supports standard URL encoding, component encoding, and form encoding.
+  </Card>
+  
+  <Card title="URL Parser" icon="globe" href="/tools/url-parser">
+    Break down URLs into protocol, hostname, port, pathname, query parameters, and hash fragments.
+  </Card>
+  
+  <Card title="Cron Job Parser" icon="clock" href="/tools/cron-parser">
+    Parse cron expressions into human-readable descriptions and preview the next 5 scheduled runs.
+  </Card>
+  
+  <Card title="Certificate Decoder" icon="lock-closed" href="/tools/cert-decoder">
+    Decode and inspect X.509 certificates (SSL/TLS). Supports PEM and DER formats. View subject, issuer, validity period, and more.
+  </Card>
+</CardGroup>
+
+## Base64 String Encoding
+
+The Base64 String tool supports three encoding modes:
+
+**Standard Base64**
+```text
+Input:  Hello, World!
+Output: SGVsbG8sIFdvcmxkIQ==
+```
+
+**URL-Safe Base64** (no padding, uses `-` and `_` instead of `+` and `/`)
+```text
+Input:  Hello, World!
+Output: SGVsbG8sIFdvcmxkIQ
+```
+
+**Decode**
+```text
+Input:  SGVsbG8sIFdvcmxkIQ==
+Output: Hello, World!
+```
+
+<Note>
+The decoder automatically handles both standard and URL-safe Base64, including missing padding.
+</Note>
+
+## JWT Debugging
+
+The JWT Debugger decodes JSON Web Tokens and displays:
+- **Header**: Algorithm and token type
+- **Payload**: Claims including `sub`, `iat`, `exp`, custom claims
+- **Expiration Status**: Shows if the token is expired
+
+**Example Output**
+```js
+// Header
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+
+// Payload
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "iat": 1516239022,
+  "exp": 1735689600
+}
+
+// Expires At: 2025-01-01T00:00:00.000Z
+// Expired: false
+```
+
+<Warning>
+The JWT Debugger does not verify signatures. It only decodes the header and payload. Never trust JWT claims without signature verification.
+</Warning>
+
+## Hash Generation
+
+The Hash Generator supports multiple algorithms:
+- **MD5** (128-bit, insecure for cryptographic use)
+- **SHA-1** (160-bit, deprecated for security)
+- **SHA-256** (256-bit, recommended)
+- **SHA-512** (512-bit, maximum security)
+- **HMAC-SHA256** (keyed hash for message authentication)
+
+**Example: SHA-256 Hash**
+```text
+Input:  hello world
+Output: b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+```
+
+The tool also displays Base64 and Base64URL encodings of the hash.
+
+<Note>
+For password hashing, use dedicated key derivation functions like bcrypt, scrypt, or Argon2. Do not use plain SHA-256 for passwords.
+</Note>
+
+## URL Encoding
+
+Supports three encoding modes:
+
+**URI Encoding** - Encodes all characters except unreserved characters
+```text
+Input:  https://example.com/path?q=hello world
+Output: https://example.com/path?q=hello%20world
+```
+
+**Component Encoding** - Encodes more aggressively, suitable for query parameters
+```text
+Input:  key=value&special=@#$
+Output: key%3Dvalue%26special%3D%40%23%24
+```
+
+**Form Encoding** - Uses `+` for spaces instead of `%20`
+```text
+Input:  hello world
+Output: hello+world
+```
+
+## Unix Time Conversion
+
+The Unix Time Converter automatically detects whether your input is:
+- **Seconds** (10 digits or less)
+- **Milliseconds** (more than 10 digits)
+- **ISO 8601 date string**
+- **Human-readable date**
+
+**Example Output**
+```text
+Local: 1/1/2025, 12:00:00 AM
+UTC: Wed, 01 Jan 2025 00:00:00 GMT
+ISO: 2025-01-01T00:00:00.000Z
+Relative: in 10 months
+Unix Seconds: 1735689600
+Unix Milliseconds: 1735689600000
+```
+
+## Cron Expression Parsing
+
+The Cron Parser translates cron expressions into plain English and shows upcoming execution times.
+
+**Example**
+```text
+Input:  0 9 * * 1-5
+Output: At 09:00 AM, Monday through Friday
+
+Next runs:
+- Monday, March 10, 2026, 9:00:00 AM
+- Tuesday, March 11, 2026, 9:00:00 AM
+- Wednesday, March 12, 2026, 9:00:00 AM
+- Thursday, March 13, 2026, 9:00:00 AM
+- Friday, March 14, 2026, 9:00:00 AM
+```
+
+## Certificate Decoder
+
+The Certificate Decoder parses X.509 certificates using a pure JavaScript ASN.1 DER parser. It supports:
+- **PEM format** (Base64-encoded with `-----BEGIN CERTIFICATE-----` headers)
+- **DER format** (binary)
+
+**Displays**:
+- Subject (CN, O, OU, C)
+- Issuer (certificate authority)
+- Validity period (Not Before / Not After)
+- Serial number
+- Signature algorithm
+- Public key algorithm and modulus
+
+<Note>
+This tool is for inspection only. It does not verify certificate chains or validate signatures against a trust store.
+</Note>
+
+## Privacy & Security
+
+<Check>
+All encoding and hashing operations run entirely in your browser using native Web Crypto APIs and battle-tested JavaScript libraries.
+</Check>
+
+<Check>
+No data is transmitted to external servers. Your JWT tokens, certificates, and sensitive data remain on your machine.
+</Check>
+
+<Check>
+The app runs as a fully static site with no backend. Even the hosting provider cannot intercept your data.
+</Check>
+
+## Best Practices
+
+**Base64 is Encoding, Not Encryption**
+
+Base64 is a data encoding format, not a security mechanism. Anyone can decode Base64 strings. Never use Base64 to "hide" passwords or secrets.
+
+**Use Strong Hash Functions**
+
+- For general integrity checks: SHA-256 or SHA-512
+- For password storage: bcrypt, scrypt, or Argon2 (not available in browser)
+- For message authentication: HMAC-SHA256 with a secret key
+
+**Validate JWT Signatures**
+
+The JWT Debugger only decodes tokens. In production applications, always verify the signature using the appropriate algorithm and secret/public key.
+
+**Certificate Validation**
+
+Inspecting a certificate's fields does not validate trust. Real certificate validation requires checking:
+- Signature chain up to a trusted root CA
+- Revocation status (OCSP or CRL)
+- Hostname matching
+- Validity period
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl + Enter` - Execute the current tool action
+- `Cmd/Ctrl + Shift + C` - Copy output to clipboard
+- `Cmd/Ctrl + K` - Open command palette to switch tools
+
+## Related Tools
+
+- [Hash Generator](/tools/hash-generator) - Generate MD5, SHA-1, SHA-256, SHA-512, and HMAC-SHA256 hashes
+- [RegExp Tester](/tools/regexp-tester) - Test regular expressions with live matching
+- [HTML Entity Encode/Decode](/tools/html-entity) - Convert HTML entities

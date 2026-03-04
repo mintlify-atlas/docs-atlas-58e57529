@@ -1,0 +1,346 @@
+---
+title: Generators & Utilities
+description: Generate QR codes, UUIDs, ULIDs, random strings, Lorem Ipsum placeholder text, and inspect string characteristics with browser-based tools.
+---
+
+## Overview
+
+Kayston's Forge includes powerful generators for common development tasks. All generation happens client-side using cryptographically secure random number generators.
+
+## Available Generators
+
+<CardGroup cols={2}>
+  <Card title="QR Code Reader/Generator" icon="qr-code" href="/tools/qr-code">
+    Generate QR codes from text or URLs. Decode QR codes from uploaded images.
+  </Card>
+  
+  <Card title="UUID/ULID Generate/Decode" icon="fingerprint" href="/tools/uuid-ulid">
+    Generate UUID v4, UUID v7, or ULID identifiers. Decode ULIDs to extract timestamps.
+  </Card>
+  
+  <Card title="Random String Generator" icon="sparkles" href="/tools/random-string">
+    Generate cryptographically secure random strings, tokens, and passphrases.
+  </Card>
+  
+  <Card title="Lorem Ipsum Generator" icon="pencil-square" href="/tools/lorem-ipsum">
+    Generate placeholder text by word count or paragraph count.
+  </Card>
+  
+  <Card title="String Inspector" icon="magnifying-glass-circle" href="/tools/string-inspector">
+    Analyze text to view character count, byte length, encoding, word count, line count, and character frequency.
+  </Card>
+</CardGroup>
+
+## QR Code Generation
+
+Generate scannable QR codes from any text, URL, or structured data.
+
+**Example: URL**
+```text
+Input: https://kaystonsforge.com
+
+Output: [Scannable QR code image]
+```
+
+**Example: Contact Information**
+```text
+Input:
+BEGIN:VCARD
+VERSION:3.0
+FN:John Doe
+TEL:+1-555-123-4567
+EMAIL:john@example.com
+END:VCARD
+
+Output: [QR code containing vCard data]
+```
+
+**Supported Content Types**
+- Plain text
+- URLs (automatically creates clickable links when scanned)
+- Email addresses (`mailto:` links)
+- Phone numbers (`tel:` links)
+- WiFi credentials (`WIFI:S:<SSID>;T:<WPA/WEP>;P:<password>;;`)
+- vCard contact information
+- SMS messages
+
+<Note>
+QR codes are generated using the `qrcode` library with error correction level M (medium, ~15% recovery).
+</Note>
+
+## QR Code Decoding
+
+Upload or drag-and-drop an image containing a QR code to decode it.
+
+**Supported Image Formats**
+- PNG
+- JPEG
+- GIF
+- WebP
+- BMP
+
+<Tip>
+For best results, use high-contrast images with the QR code clearly visible. The decoder uses the `jsQR` library.
+</Tip>
+
+## UUID & ULID Generation
+
+Generate universally unique identifiers with different characteristics.
+
+**UUID v4 (Random)**
+```text
+Example: 550e8400-e29b-41d4-a716-446655440000
+```
+- 128-bit identifier
+- Cryptographically random
+- No embedded timestamp
+- ~2^122 possible values
+
+**UUID v7 (Time-Ordered)**
+```text
+Example: 018e1f32-4c2e-7890-a1b2-c3d4e5f6a7b8
+```
+- 128-bit identifier
+- Timestamp in first 48 bits
+- Sortable by creation time
+- Better for database indexing
+- Standardized in RFC 9562 (2024)
+
+**ULID (Universally Unique Lexicographically Sortable Identifier)**
+```text
+Example: 01ARZ3NDEKTSV4RRFFQ69G5FAV
+```
+- 128-bit identifier
+- Timestamp in first 48 bits
+- Lexicographically sortable
+- Case-insensitive
+- Crockford's Base32 encoding (URL-safe, no special characters)
+- Monotonic (incrementing within the same millisecond)
+
+**Decode ULID**
+```text
+Input:  01ARZ3NDEKTSV4RRFFQ69G5FAV
+Output: 2016-07-20T23:06:47.000Z
+```
+
+<Note>
+Use UUID v7 or ULID for time-series data and database primary keys to improve index performance. Use UUID v4 when you need purely random identifiers with no time information.
+</Note>
+
+## Random String Generation
+
+Generate cryptographically secure random strings using `crypto.getRandomValues()`.
+
+**Available Modes**
+
+**Alphanumeric** (default)
+```text
+Charset: A-Z, a-z, 0-9
+Example: T8xKp2QmN7vRsZ4jL9wYbDfG5hCnX3uA
+```
+
+**Hexadecimal**
+```text
+Charset: 0-9, a-f
+Example: 3f7a9c2e5d8b1046fa7c9e2b3d6a8f1c
+```
+
+**Base64**
+```text
+Charset: A-Z, a-z, 0-9, +, /
+Example: mK7Tp2Qs9XvRn4jL8wYb6DfG5hCnZ3uA
+```
+
+**Symbols**
+```text
+Charset: A-Z, a-z, 0-9, !@#$%^&*()-_=+[]{}|;:,.<>?
+Example: T8x!p2Q@N7v#sZ$jL%wY^D&G*h(n)3-A
+```
+
+**Passphrase** (memorable)
+```text
+Format: word-word-word-word
+Example: correct-horse-battery-staple-amber-frost
+```
+
+**Configuration**
+- **Length**: 1-4096 characters (passphrases use word count: 3-12 words)
+- **Count**: Generate 1-100 strings at once
+
+<Warning>
+Do not use random strings for password hashing. Use dedicated password hashing algorithms like bcrypt, scrypt, or Argon2.
+</Warning>
+
+## Lorem Ipsum Generation
+
+Generate placeholder text for mockups and prototypes.
+
+**By Paragraphs** (default)
+```text
+Input: 3
+
+Output:
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+```
+
+**By Words**
+```text
+Input: 10
+
+Output:
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do
+```
+
+**Limits**
+- **Paragraphs**: 1-1000
+- **Words**: 1-1000
+
+<Tip>
+For realistic content length testing, use 2-3 paragraphs for short descriptions, 5-10 paragraphs for article previews, and 20+ paragraphs for long-form content.
+</Tip>
+
+## String Inspector
+
+Analyze text to understand its properties and characteristics.
+
+**Example Analysis**
+```text
+Input: Hello, 世界! 🌍
+
+Grapheme count: 12
+Byte length (UTF-8): 18
+Byte length (UTF-16): 24
+Line count: 1
+Word count: 2
+Encoding: UTF-8
+
+Top characters:
+"l": 2
+"o": 2
+",": 1
+" ": 2
+"H": 1
+"e": 1
+"世": 1
+"界": 1
+"!": 1
+"🌍": 1
+```
+
+**Metrics Explained**
+
+- **Grapheme count**: Visual characters as perceived by humans (emoji count as 1)
+- **UTF-8 byte length**: Storage size in UTF-8 encoding (variable 1-4 bytes per character)
+- **UTF-16 byte length**: Storage size in UTF-16 encoding (mostly 2 bytes per character)
+- **Line count**: Number of lines (separated by `\n` or `\r\n`)
+- **Word count**: Number of whitespace-separated tokens
+- **Encoding**: ASCII (7-bit) or UTF-8 (multibyte)
+- **Character frequency**: Top 12 most frequent characters
+
+<Note>
+Grapheme segmentation uses the Intl.Segmenter API to correctly count complex characters like emoji with skin tone modifiers or combining diacritics.
+</Note>
+
+## Use Cases
+
+**QR Codes**
+- Share URLs at conferences or events
+- Encode WiFi credentials for easy sharing
+- Create contact cards for business cards
+- Generate payment links or cryptocurrency addresses
+
+**UUIDs & ULIDs**
+- Database primary keys (use UUID v7 or ULID for better index performance)
+- Request/transaction IDs for distributed systems
+- Temporary file names
+- Session identifiers
+- Resource identifiers in REST APIs
+
+**Random Strings**
+- API keys and tokens
+- Temporary passwords
+- CSRF tokens
+- State parameters for OAuth
+- Test data generation
+
+**Lorem Ipsum**
+- UI/UX mockups
+- Typography testing
+- Content length estimation
+- Placeholder content during development
+
+**String Inspector**
+- Validate input length constraints (e.g., database varchar limits)
+- Debug encoding issues
+- Analyze text for internationalization
+- Estimate storage requirements
+- Identify unexpected characters
+
+## Best Practices
+
+**UUID Selection Guide**
+
+<CardGroup cols={3}>
+  <Card title="UUID v4">
+    Use when you need maximum randomness and no time correlation
+  </Card>
+  <Card title="UUID v7">
+    Use for database primary keys and time-series data
+  </Card>
+  <Card title="ULID">
+    Use when you need URL-safe, human-readable, sortable IDs
+  </Card>
+</CardGroup>
+
+**Random String Security**
+
+- For security tokens, use at least 32 characters
+- For API keys, use 64+ characters or 256-bit encoded in Base64
+- For memorable passwords, use passphrases with 6+ words
+- Never use random strings to "encrypt" data (use real encryption)
+
+**QR Code Best Practices**
+
+- Keep content under 200 characters for reliable scanning
+- Use high contrast (black on white works best)
+- Don't scale QR codes smaller than 2×2 cm (0.8×0.8 in)
+- Test with multiple QR readers before printing
+- Add a visual logo/label near the QR code to indicate its purpose
+
+**String Analysis**
+
+Use the String Inspector to:
+- Verify maximum byte lengths before database insertion
+- Check UTF-8 vs UTF-16 size differences for storage optimization
+- Debug invisible characters (zero-width spaces, BOM markers)
+- Ensure text meets character limits (e.g., SMS 160 chars, Twitter 280 chars)
+
+## Privacy & Security
+
+<Check>
+All generators use cryptographically secure random number generation via `crypto.getRandomValues()`, not `Math.random()`.
+</Check>
+
+<Check>
+UUIDs, ULIDs, and random strings are generated entirely in your browser. No data is transmitted to external servers.
+</Check>
+
+<Check>
+QR code generation and decoding happens client-side. Your QR code content remains private.
+</Check>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl + Enter` - Generate new value
+- `Cmd/Ctrl + Shift + C` - Copy output
+- `Cmd/Ctrl + K` - Switch tools
+
+## Related Tools
+
+- [Hash Generator](/tools/hash-generator) - Generate MD5, SHA-1, SHA-256, SHA-512 hashes
+- [Base64 String Encode/Decode](/tools/base64-string) - Encode/decode Base64 strings
+- [RegExp Tester](/tools/regexp-tester) - Test regular expressions with pattern matching

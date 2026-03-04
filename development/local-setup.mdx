@@ -1,0 +1,228 @@
+---
+title: Local Development Setup
+description: Set up your local environment to run and develop Kayston's Forge
+---
+
+Kayston's Forge is built with Next.js 14 App Router and TypeScript. All processing runs client-side, making it a fully static, privacy-first developer utilities suite.
+
+## Prerequisites
+
+- **Node.js** 18 or later
+- **npm** or **yarn** package manager
+- A modern code editor (VS Code recommended)
+
+## Clone and Install
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone <repository-url>
+    cd kaystons-forge
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    ```
+
+    This will install all required dependencies including:
+    - Next.js 14 and React 18
+    - TypeScript with strict mode
+    - Tailwind CSS for styling
+    - Zustand for UI state management
+    - Dexie for IndexedDB storage
+    - Vitest for testing
+  </Step>
+
+  <Step title="Start the development server">
+    ```bash
+    npm run dev
+    ```
+
+    The application will be available at `http://localhost:3000` and will redirect to the default tool (`/tools/json-format-validate`).
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts for development and maintenance:
+
+<CodeGroup>
+```bash Development
+# Start Next.js dev server with hot reload
+npm run dev
+```
+
+```bash Building
+# Build static export (outputs to out/ directory)
+npm run build
+```
+
+```bash Testing
+# Run all tests with Vitest
+npm run test
+
+# Run a single test file
+npx vitest run tests/unit/engine.test.ts
+
+# Run tests matching a pattern
+npx vitest -t "json format"
+```
+
+```bash Linting & Auditing
+# Lint with ESLint
+npm run lint
+
+# Run npm audit (fails on CRITICAL only)
+npm run audit
+```
+</CodeGroup>
+
+## Project Structure
+
+Understanding the codebase structure will help you navigate and contribute effectively:
+
+```
+kaystons-forge/
+├── app/
+│   ├── page.tsx                    # Root redirect to default tool
+│   ├── tools/[toolId]/page.tsx     # Dynamic tool pages
+│   └── globals.css                 # Global styles & CSS variables
+├── components/
+│   ├── layout/
+│   │   └── AppShell.tsx            # Main layout component
+│   └── tools/
+│       └── ToolWorkbench.tsx       # Unified tool UI
+├── lib/
+│   ├── tools/
+│   │   ├── registry.ts             # Tool definitions (47 tools)
+│   │   ├── engine.ts               # Tool processing logic
+│   │   ├── php-tools.ts            # PHP serialization
+│   │   ├── curl-to-code.ts         # cURL converter
+│   │   ├── json-to-code.ts         # JSON to TypeScript/Python/Go/Rust
+│   │   ├── cert-decoder.ts         # X.509 certificate parser
+│   │   ├── list-compare.ts         # List operations
+│   │   └── csv-to-sql.ts           # CSV to SQL converter
+│   ├── store.ts                    # Zustand state management
+│   └── db.ts                       # Dexie IndexedDB wrapper
+├── hooks/
+│   └── useHistory.ts               # Tool history management
+├── types/
+│   ├── index.ts                    # TypeScript interfaces
+│   └── vendor.d.ts                 # Third-party type declarations
+├── tests/
+│   └── unit/
+│       ├── engine.test.ts          # Tool engine tests (57 tests)
+│       ├── bugfixes.test.ts        # Regression tests (28 tests)
+│       └── fuzz.test.ts            # Robustness tests (72 tests)
+├── public/
+│   ├── manifest.json               # PWA manifest
+│   └── sw.js                       # Service worker
+└── next.config.mjs                 # Next.js configuration
+```
+
+## Development Workflow
+
+<Steps>
+  <Step title="Make your changes">
+    Edit files in `app/`, `components/`, `lib/`, or other directories as needed.
+  </Step>
+
+  <Step title="Test locally">
+    The dev server automatically reloads when you save changes. Test your modifications in the browser.
+  </Step>
+
+  <Step title="Run tests">
+    ```bash
+    npm run test
+    ```
+
+    Ensure all 157 tests pass before committing.
+  </Step>
+
+  <Step title="Lint your code">
+    ```bash
+    npm run lint
+    ```
+
+    Fix any ESLint warnings or errors.
+  </Step>
+
+  <Step title="Build for production">
+    ```bash
+    npm run build
+    ```
+
+    Verify the static export builds successfully. Output will be in the `out/` directory.
+  </Step>
+</Steps>
+
+## Keyboard Shortcuts
+
+These shortcuts work in the running application:
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + K` | Open command palette |
+| `Cmd/Ctrl + 1` | Toggle sidebar |
+| `Cmd/Ctrl + Enter` | Execute active tool action |
+| `Cmd/Ctrl + Shift + C` | Copy output |
+| `Cmd/Ctrl + Shift + S` | Download output |
+| `Cmd/Ctrl + [` | Previous tool |
+| `Cmd/Ctrl + ]` | Next tool |
+| `Esc` | Clear input |
+
+## Tech Stack Overview
+
+Kayston's Forge uses modern web technologies:
+
+- **Next.js 14** with App Router for static site generation
+- **React 18** with TypeScript strict mode
+- **Tailwind CSS** for utility-first styling
+- **Zustand** for lightweight UI state management
+- **Dexie** for client-side IndexedDB storage
+- **Heroicons** for consistent iconography
+- **Vitest** with jsdom for component and unit testing
+
+<Warning>
+  The bundle size is currently ~513 kB on first load because all tool dependencies load on every page. Future optimization with dynamic imports is planned.
+</Warning>
+
+## Troubleshooting
+
+### Port Already in Use
+
+If port 3000 is already occupied:
+
+```bash
+# Use a different port
+PORT=3001 npm run dev
+```
+
+### TypeScript Errors
+
+Ensure your editor is using the workspace TypeScript version:
+
+```bash
+# In VS Code, open command palette and select:
+# "TypeScript: Select TypeScript Version" → "Use Workspace Version"
+```
+
+### Test Failures
+
+If tests fail unexpectedly:
+
+```bash
+# Clear Vitest cache
+rm -rf node_modules/.vitest
+npm run test
+```
+
+## Next Steps
+
+Now that you have a local environment running:
+
+- Learn how to [add new tools](/development/adding-tools)
+- Understand the [testing strategy](/development/testing)
+- Prepare for [deployment](/development/deployment)

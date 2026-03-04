@@ -1,122 +1,184 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Kayston's Forge",
+  "theme": "palm",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#13b882",
+    "light": "#0e6154",
+    "dark": "#13b882"
   },
-  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "https://media.brand.dev/c97a7fbc-6702-4e1b-88aa-069539066f55.svg",
+    "dark": "https://media.brand.dev/c97a7fbc-6702-4e1b-88aa-069539066f55.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Ibuqun/Kaystons-Forge"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Ibuqun/Kaystons-Forge"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "installation"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Features",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "features/tool-categories",
+              "features/command-palette",
+              "features/keyboard-shortcuts",
+              "features/history-favorites",
+              "features/pwa-offline"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "User Guide",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "guides/encoding-tools",
+              "guides/formatting-tools",
+              "guides/data-transformation",
+              "guides/generators",
+              "guides/privacy-security"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Tools Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Encoding & Encryption",
             "pages": [
-              "api-reference/introduction"
+              "tools/unix-time-converter",
+              "tools/json-format-validate",
+              "tools/base64-string",
+              "tools/base64-image",
+              "tools/jwt-debugger",
+              "tools/regexp-tester",
+              "tools/url-encode-decode",
+              "tools/url-parser",
+              "tools/cron-parser",
+              "tools/cert-decoder"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Escaping & Entities",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "tools/html-entity",
+              "tools/backslash-escape",
+              "tools/uuid-ulid"
+            ]
+          },
+          {
+            "group": "Preview & Comparison",
+            "pages": [
+              "tools/html-preview",
+              "tools/text-diff"
+            ]
+          },
+          {
+            "group": "Format Converters",
+            "pages": [
+              "tools/yaml-to-json",
+              "tools/json-to-yaml",
+              "tools/number-base",
+              "tools/color-converter",
+              "tools/svg-to-css",
+              "tools/curl-to-code",
+              "tools/json-to-code",
+              "tools/hex-to-ascii",
+              "tools/ascii-to-hex"
+            ]
+          },
+          {
+            "group": "Code Beautifiers",
+            "pages": [
+              "tools/html-beautify",
+              "tools/css-beautify",
+              "tools/js-beautify",
+              "tools/erb-beautify",
+              "tools/less-beautify",
+              "tools/scss-beautify",
+              "tools/xml-beautify"
+            ]
+          },
+          {
+            "group": "Generators",
+            "pages": [
+              "tools/lorem-ipsum",
+              "tools/qr-code",
+              "tools/string-inspector",
+              "tools/random-string"
+            ]
+          },
+          {
+            "group": "Data Transformers",
+            "pages": [
+              "tools/json-to-csv",
+              "tools/csv-to-json",
+              "tools/hash-generator",
+              "tools/html-to-jsx",
+              "tools/markdown-preview",
+              "tools/sql-formatter",
+              "tools/list-splitter",
+              "tools/csv-to-sql",
+              "tools/list-compare",
+              "tools/text-separator",
+              "tools/string-case",
+              "tools/php-to-json",
+              "tools/json-to-php",
+              "tools/php-serializer",
+              "tools/php-unserializer",
+              "tools/line-sort"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Advanced",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/tool-system",
+              "architecture/state-management",
+              "architecture/storage"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/local-setup",
+              "development/adding-tools",
+              "development/testing",
+              "development/deployment"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/privacy-first",
+              "security/headers",
+              "security/dependencies"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

@@ -1,0 +1,258 @@
+---
+title: SQL Formatter
+description: Format SQL queries with support for multiple database dialects
+---
+
+## Overview
+
+The SQL Formatter beautifies SQL queries with proper indentation, keyword capitalization, and line breaks. Supports multiple database dialects including MySQL, PostgreSQL, SQLite, SQL Server, Oracle, and more.
+
+## Use Cases
+
+- **Query Beautification**: Format minified or unformatted SQL for readability
+- **Code Review**: Standardize SQL formatting across team code
+- **Documentation**: Generate readable SQL examples for docs
+- **Debugging**: Make complex queries easier to understand
+- **Learning**: Study well-formatted SQL as a teaching aid
+- **Code Generation**: Format programmatically generated SQL
+
+## Input Format
+
+Unformatted or minified SQL:
+
+```sql
+select u.id,u.name,u.email,o.order_id,o.total from users u inner join orders o on u.id=o.user_id where o.total>100 order by o.total desc;
+```
+
+```sql
+CREATE TABLE products(id INT PRIMARY KEY,name VARCHAR(255),price DECIMAL(10,2),created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+```
+
+## Output Format
+
+Formatted SQL with proper indentation and structure:
+
+```sql
+SELECT
+  u.id,
+  u.name,
+  u.email,
+  o.order_id,
+  o.total
+FROM
+  users u
+  INNER JOIN orders o ON u.id = o.user_id
+WHERE
+  o.total > 100
+ORDER BY
+  o.total DESC;
+```
+
+```sql
+CREATE TABLE products (
+  id INT PRIMARY KEY,
+  name VARCHAR(255),
+  price DECIMAL(10, 2),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## Supported Dialects
+
+### Standard SQL (default)
+Generic SQL formatting for most databases
+
+### MySQL
+```sql
+SELECT
+  *
+FROM
+  users
+WHERE
+  created_at > NOW() - INTERVAL 7 DAY
+LIMIT 10;
+```
+
+### PostgreSQL
+```sql
+SELECT
+  u.id,
+  u.name,
+  ARRAY_AGG(o.order_id) AS order_ids
+FROM
+  users u
+  LEFT JOIN orders o ON u.id = o.user_id
+GROUP BY
+  u.id,
+  u.name;
+```
+
+### SQLite
+```sql
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  completed INTEGER DEFAULT 0
+);
+```
+
+### SQL Server (T-SQL)
+```sql
+SELECT
+  TOP 10 *
+FROM
+  dbo.users
+WHERE
+  status = 'active'
+ORDER BY
+  created_at DESC;
+```
+
+### Oracle PL/SQL
+```sql
+SELECT
+  *
+FROM
+  users
+WHERE
+  ROWNUM <= 10
+  AND status = 'active';
+```
+
+## Examples
+
+<CodeGroup>
+```sql Input: Complex Query
+select p.product_name,c.category_name,sum(oi.quantity) as total_sold,sum(oi.quantity*oi.unit_price) as revenue from order_items oi join products p on oi.product_id=p.id join categories c on p.category_id=c.id where oi.order_date between '2024-01-01' and '2024-12-31' group by p.product_name,c.category_name having sum(oi.quantity*oi.unit_price)>1000 order by revenue desc;
+```
+
+```sql Output
+SELECT
+  p.product_name,
+  c.category_name,
+  SUM(oi.quantity) AS total_sold,
+  SUM(oi.quantity * oi.unit_price) AS revenue
+FROM
+  order_items oi
+  JOIN products p ON oi.product_id = p.id
+  JOIN categories c ON p.category_id = c.id
+WHERE
+  oi.order_date BETWEEN '2024-01-01' AND '2024-12-31'
+GROUP BY
+  p.product_name,
+  c.category_name
+HAVING
+  SUM(oi.quantity * oi.unit_price) > 1000
+ORDER BY
+  revenue DESC;
+```
+</CodeGroup>
+
+<CodeGroup>
+```sql Input: CTE Query
+with monthly_sales as(select date_trunc('month',order_date) as month,sum(total) as sales from orders group by month),top_months as(select month,sales,rank() over(order by sales desc) as rank from monthly_sales)select * from top_months where rank<=3;
+```
+
+```sql Output
+WITH monthly_sales AS (
+  SELECT
+    DATE_TRUNC('month', order_date) AS month,
+    SUM(total) AS sales
+  FROM
+    orders
+  GROUP BY
+    month
+),
+top_months AS (
+  SELECT
+    month,
+    sales,
+    RANK() OVER (
+      ORDER BY
+        sales DESC
+    ) AS rank
+  FROM
+    monthly_sales
+)
+SELECT
+  *
+FROM
+  top_months
+WHERE
+  rank <= 3;
+```
+</CodeGroup>
+
+<CodeGroup>
+```sql Input: DDL Statement
+CREATE TABLE users(id SERIAL PRIMARY KEY,username VARCHAR(50) UNIQUE NOT NULL,email VARCHAR(255) UNIQUE NOT NULL,password_hash VARCHAR(255) NOT NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
+```
+
+```sql Output
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+</CodeGroup>
+
+<CodeGroup>
+```sql Input: Window Functions
+select employee_id,department_id,salary,avg(salary) over(partition by department_id) as dept_avg,rank() over(partition by department_id order by salary desc) as dept_rank from employees;
+```
+
+```sql Output
+SELECT
+  employee_id,
+  department_id,
+  salary,
+  AVG(salary) OVER (
+    PARTITION BY department_id
+  ) AS dept_avg,
+  RANK() OVER (
+    PARTITION BY department_id
+    ORDER BY
+      salary DESC
+  ) AS dept_rank
+FROM
+  employees;
+```
+</CodeGroup>
+
+## Formatting Features
+
+- **Keyword Capitalization**: SQL keywords in uppercase
+- **Indentation**: Consistent 2-space indentation
+- **Line Breaks**: Logical breaks for clauses (SELECT, FROM, WHERE, etc.)
+- **Alignment**: Aligned column lists and join conditions
+- **Parentheses**: Proper formatting for subqueries and functions
+- **Operator Spacing**: Consistent spacing around operators (equals, less than, greater than, etc.)
+- **Comment Preservation**: Maintains SQL comments
+
+## Implementation Details
+
+From `lib/tools/engine.ts:677-681`:
+
+```typescript
+case 'sql-formatter': {
+  const language = action === 'default' ? 'sql' : action;
+  const { format: formatSql } = await import('sql-formatter');
+  return { output: formatSql(input, { language: language as any }) };
+}
+```
+
+<Note>
+Uses the `sql-formatter` library with dialect-specific parsing for accurate formatting across different SQL variants.
+</Note>
+
+<Tip>
+For best results, select the specific dialect that matches your database. Dialect-specific formatting handles vendor-specific syntax and keywords correctly.
+</Tip>
+
+<Warning>
+The formatter preserves SQL logic but may change query structure. Always test formatted queries in a development environment before using in production.
+</Warning>

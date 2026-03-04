@@ -1,0 +1,400 @@
+---
+title: PHP Unserializer
+description: Unserialize PHP data to JSON or PHP array syntax
+---
+
+## Overview
+
+The PHP Unserializer parses PHP serialize format and converts it to readable formats: JSON (default) or PHP array syntax. Essential for inspecting PHP session data, cache entries, and database values stored in serialize format.
+
+## Use Cases
+
+- **Session Inspection**: View PHP session data in readable format
+- **Database Debug**: Inspect serialized columns from WordPress, Laravel, etc.
+- **Cache Analysis**: Examine cached values in Memcache/Redis
+- **Data Migration**: Extract data from PHP serialize for conversion
+- **Debugging**: Understand what's stored in serialized format
+- **WordPress**: Inspect options, post meta, user meta
+
+## Input Format
+
+PHP serialized string:
+
+```php
+a:3:{s:4:"name";s:5:"Alice";s:3:"age";i:28;s:6:"active";b:1;}
+```
+
+```php
+a:3:{i:0;s:5:"apple";i:1;s:6:"banana";i:2;s:6:"cherry";}
+```
+
+```php
+O:4:"User":2:{s:2:"id";i:123;s:4:"name";s:5:"Alice";}
+```
+
+## Actions
+
+### Default (JSON)
+Deserialize to formatted JSON:
+```json
+{
+  "name": "Alice",
+  "age": 28,
+  "active": true
+}
+```
+
+### To Array
+Deserialize to PHP array syntax:
+```php
+[
+    'name' => 'Alice',
+    'age' => 28,
+    'active' => true,
+]
+```
+
+## Output Format
+
+### JSON Output (Default)
+Formatted JSON with proper indentation:
+```json
+{
+  "user": {
+    "id": 1,
+    "name": "Alice"
+  },
+  "settings": {
+    "theme": "dark"
+  }
+}
+```
+
+### PHP Array Output
+Readable PHP array with indentation:
+```php
+[
+    'user' => [
+        'id' => 1,
+        'name' => 'Alice',
+    ],
+    'settings' => [
+        'theme' => 'dark',
+    ],
+]
+```
+
+## Examples
+
+<CodeGroup>
+```php Input: Simple Object
+a:3:{s:4:"name";s:4:"John";s:5:"email";s:16:"john@example.com";s:6:"active";b:1;}
+```
+
+```json Output (JSON)
+{
+  "name": "John",
+  "email": "john@example.com",
+  "active": true
+}
+```
+
+```php Output (To Array)
+[
+    'name' => 'John',
+    'email' => 'john@example.com',
+    'active' => true,
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Array
+a:3:{i:0;s:3:"red";i:1;s:5:"green";i:2;s:4:"blue";}
+```
+
+```json Output (JSON)
+[
+  "red",
+  "green",
+  "blue"
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Nested Structure
+a:2:{s:4:"user";a:2:{s:2:"id";i:1;s:4:"name";s:5:"Alice";}s:8:"settings";a:2:{s:5:"theme";s:4:"dark";s:6:"locale";s:5:"en_US";}}
+```
+
+```json Output (JSON)
+{
+  "user": {
+    "id": 1,
+    "name": "Alice"
+  },
+  "settings": {
+    "theme": "dark",
+    "locale": "en_US"
+  }
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: Type Preservation
+a:5:{s:6:"string";s:5:"hello";s:7:"integer";i:42;s:5:"float";d:3.14159;s:4:"bool";b:0;s:4:"null";N;}
+```
+
+```json Output (JSON)
+{
+  "string": "hello",
+  "integer": 42,
+  "float": 3.14159,
+  "bool": false,
+  "null": null
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: PHP Object
+O:4:"User":3:{s:2:"id";i:123;s:4:"name";s:5:"Alice";s:5:"email";s:15:"alice@example.com";}
+```
+
+```json Output (JSON)
+{
+  "__class": "User",
+  "id": 123,
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: WordPress Post Meta
+a:3:{s:10:"post_views";i:1523;s:8:"featured";b:1;s:4:"tags";a:3:{i:0;s:4:"tech";i:1;s:3:"web";i:2;s:3:"api";}}
+```
+
+```json Output (JSON)
+{
+  "post_views": 1523,
+  "featured": true,
+  "tags": [
+    "tech",
+    "web",
+    "api"
+  ]
+}
+```
+</CodeGroup>
+
+<CodeGroup>
+```php Input: UTF-8 and Emoji
+a:2:{s:7:"message";s:12:"Hello 世界";s:5:"emoji";s:8:"🌍🚀";}
+```
+
+```json Output (JSON)
+{
+  "message": "Hello 世界",
+  "emoji": "🌍🚀"
+}
+```
+</CodeGroup>
+
+## PHP Serialize Format Reference
+
+### Type Markers
+- `N;` - NULL value
+- `b:0;` - Boolean false
+- `b:1;` - Boolean true
+- `i:123;` - Integer (123)
+- `d:3.14;` - Float/Double (3.14)
+- `s:5:"hello";` - String (length 5, value "hello")
+- `a:2:{...}` - Array (2 elements)
+- `O:4:"User":2:{...}` - Object (class "User", 2 properties)
+
+### String Format
+```php
+s:length:"content";
+```
+Length is **byte count** (UTF-8), not character count.
+
+Example:
+```php
+s:12:"Hello 世界";
+```
+- 9 characters, 12 bytes in UTF-8
+
+### Array Format
+```php
+a:count:{key1;value1;key2;value2;...}
+```
+
+Sequential:
+```php
+a:2:{i:0;s:3:"foo";i:1;s:3:"bar";}
+```
+
+Associative:
+```php
+a:2:{s:4:"name";s:4:"John";s:3:"age";i:30;}
+```
+
+### Object Format
+```php
+O:class_length:"class_name":property_count:{properties}
+```
+
+Example:
+```php
+O:4:"User":2:{s:2:"id";i:1;s:4:"name";s:5:"Alice";}
+```
+
+## Error Handling
+
+Invalid serialize format:
+```
+Invalid input
+```
+→ Error: Unknown type or malformed syntax
+
+Trailing garbage:
+```
+a:2:{i:0;s:3:"foo";i:1;s:3:"bar";}extra
+```
+→ Error: Trailing garbage at position X
+
+Unterminated structure:
+```
+a:2:{i:0;s:3:"foo"
+```
+→ Error: Unexpected end of input
+
+## Implementation Details
+
+From `lib/tools/engine.ts:774-781`:
+
+```typescript
+case 'php-unserializer': {
+  if (action === 'to-array') {
+    const parsed = phpUnserialize(input);
+    return { output: phpArraySyntax(parsed) };
+  }
+  const parsed = phpUnserialize(input);
+  return { output: stringify(parsed, true) };
+}
+```
+
+From `lib/tools/php-tools.ts:7-95`:
+
+```typescript
+export function phpUnserialize(input: string): PhpValue {
+  const text = input.trim();
+  let pos = 0;
+
+  function read(n: number): string {
+    const s = text.slice(pos, pos + n);
+    pos += n;
+    return s;
+  }
+
+  function readUntil(char: string): string {
+    const start = pos;
+    while (pos < text.length && text[pos] !== char) pos++;
+    const result = text.slice(start, pos);
+    pos++; // skip delimiter
+    return result;
+  }
+
+  function parse(): PhpValue {
+    const type = text[pos++];
+    if (pos < text.length && text[pos] === ':') pos++;
+
+    switch (type) {
+      case 'N': {
+        pos++; // skip ';'
+        return null;
+      }
+      case 'b': {
+        const val = readUntil(';');
+        return val === '1';
+      }
+      case 'i': {
+        const val = readUntil(';');
+        return parseInt(val, 10);
+      }
+      case 'd': {
+        const val = readUntil(';');
+        return parseFloat(val);
+      }
+      case 's': {
+        const len = parseInt(readUntil(':'));
+        pos++; // skip opening "
+        const str = read(len);
+        pos += 2; // skip ";
+        return str;
+      }
+      case 'a': {
+        const count = parseInt(readUntil(':'));
+        pos++; // skip '{'
+        const result: Record<string, PhpValue> = {};
+        for (let i = 0; i < count; i++) {
+          const key = parse() as string | number;
+          const value = parse();
+          result[String(key)] = value;
+        }
+        pos++; // skip '}'
+        const keys = Object.keys(result);
+        const isSequential = keys.every((k, i) => k === String(i));
+        return isSequential ? Object.values(result) : result;
+      }
+      case 'O': {
+        const classLen = parseInt(readUntil(':'));
+        pos++; // skip '"'
+        const className = read(classLen);
+        pos += 2; // skip '":'
+        const count = parseInt(readUntil(':'));
+        pos++; // skip '{'
+        const result: Record<string, PhpValue> = { __class: className };
+        for (let i = 0; i < count; i++) {
+          const key = parse() as string | number;
+          const value = parse();
+          result[String(key)] = value;
+        }
+        pos++; // skip '}'
+        return result;
+      }
+      default:
+        throw new Error(`Unknown PHP serialize type '${type}' at position ${pos}`);
+    }
+  }
+
+  if (text === 'N;') return null;
+  const result = parse();
+  if (pos !== text.length) {
+    throw new Error(`Trailing garbage at position ${pos}: "${text.slice(pos, pos + 20)}"`);
+  }
+  return result;
+}
+```
+
+<Note>
+The unserializer properly handles UTF-8 multibyte strings by using byte offsets (not character offsets), ensuring compatibility with PHP's native `unserialize()` function.
+</Note>
+
+<Tip>
+For WordPress debugging:
+1. Get serialized value: `get_option('option_name')`
+2. Paste into PHP Unserializer
+3. View in JSON format for easy inspection
+4. Convert to PHP array syntax if you need to edit and re-serialize
+</Tip>
+
+<Warning>
+- The unserializer does NOT execute PHP code or instantiate classes (safe for untrusted input)
+- Object properties (public, protected, private) are all treated as regular properties
+- Custom serialization methods (`__sleep`, `__wakeup`, `__serialize`) are not invoked
+- Very deeply nested structures may cause stack overflow
+</Warning>

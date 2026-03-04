@@ -1,0 +1,298 @@
+---
+title: Markdown Preview
+description: Render Markdown to HTML with GitHub Flavored Markdown support
+---
+
+## Overview
+
+The Markdown Preview tool converts Markdown text to sanitized HTML with GitHub Flavored Markdown (GFM) support. Renders headings, lists, code blocks, tables, links, images, and more in a safe, XSS-protected preview.
+
+## Use Cases
+
+- **Content Preview**: Preview Markdown content before publishing
+- **Documentation**: Render README files and documentation
+- **Blog Posts**: Preview Markdown blog posts and articles
+- **Comments**: Render user-submitted Markdown content safely
+- **Learning**: Understand Markdown syntax and rendering
+- **Conversion**: Convert Markdown to HTML for embedding
+
+## Input Format
+
+Standard Markdown or GitHub Flavored Markdown:
+
+```markdown
+# Heading 1
+## Heading 2
+
+This is a paragraph with **bold** and *italic* text.
+
+- List item 1
+- List item 2
+- List item 3
+
+[Link text](https://example.com)
+
+`inline code`
+
+```javascript
+const greeting = "Hello, World!";
+console.log(greeting);
+```
+```
+
+## Output Format
+
+Sanitized HTML rendered in a preview pane:
+
+```html
+<h1>Heading 1</h1>
+<h2>Heading 2</h2>
+<p>This is a paragraph with <strong>bold</strong> and <em>italic</em> text.</p>
+<ul>
+  <li>List item 1</li>
+  <li>List item 2</li>
+  <li>List item 3</li>
+</ul>
+<p><a href="https://example.com">Link text</a></p>
+<p><code>inline code</code></p>
+<pre><code class="language-javascript">const greeting = "Hello, World!";
+console.log(greeting);
+</code></pre>
+```
+
+## Supported Markdown Syntax
+
+### Headings
+
+```markdown
+# Heading 1
+## Heading 2
+### Heading 3
+#### Heading 4
+##### Heading 5
+###### Heading 6
+```
+
+### Emphasis
+
+```markdown
+**bold text**
+*italic text*
+***bold and italic***
+~~strikethrough~~
+```
+
+### Lists
+
+**Unordered:**
+```markdown
+- Item 1
+- Item 2
+  - Nested item 2.1
+  - Nested item 2.2
+- Item 3
+```
+
+**Ordered:**
+```markdown
+1. First item
+2. Second item
+3. Third item
+```
+
+### Links and Images
+
+```markdown
+[Link text](https://example.com)
+[Link with title](https://example.com "Title")
+![Alt text](https://example.com/image.jpg)
+```
+
+### Code
+
+**Inline:**
+```markdown
+Use `const` to declare constants.
+```
+
+**Block:**
+````markdown
+```javascript
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+```
+````
+
+### Blockquotes
+
+```markdown
+> This is a blockquote.
+> It can span multiple lines.
+>
+> And multiple paragraphs.
+```
+
+### Tables (GFM)
+
+```markdown
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Cell 1   | Cell 2   | Cell 3   |
+| Cell 4   | Cell 5   | Cell 6   |
+```
+
+### Horizontal Rules
+
+```markdown
+---
+***
+___
+```
+
+## Examples
+
+<CodeGroup>
+```markdown Input: Documentation
+# API Documentation
+
+## Authentication
+
+Use the `Authorization` header with your API key:
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://api.example.com/data
+```
+
+## Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /users | List all users |
+| POST | /users | Create a user |
+| GET | /users/:id | Get user by ID |
+```
+
+```html Output
+<h1>API Documentation</h1>
+<h2>Authentication</h2>
+<p>Use the <code>Authorization</code> header with your API key:</p>
+<pre><code class="language-bash">curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://api.example.com/data
+</code></pre>
+<h2>Endpoints</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Method</th>
+      <th>Endpoint</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GET</td>
+      <td>/users</td>
+      <td>List all users</td>
+    </tr>
+    <tr>
+      <td>POST</td>
+      <td>/users</td>
+      <td>Create a user</td>
+    </tr>
+    <tr>
+      <td>GET</td>
+      <td>/users/:id</td>
+      <td>Get user by ID</td>
+    </tr>
+  </tbody>
+</table>
+```
+</CodeGroup>
+
+<CodeGroup>
+```markdown Input: Blog Post
+# Getting Started with React
+
+React is a **JavaScript library** for building user interfaces.
+
+## Installation
+
+Install React using npm:
+
+```bash
+npm install react react-dom
+```
+
+## Your First Component
+
+```jsx
+function Welcome({ name }) {
+  return <h1>Hello, {name}!</h1>;
+}
+```
+
+> **Note:** React components must start with a capital letter.
+
+[Learn more →](https://react.dev)
+```
+
+```html Output
+<h1>Getting Started with React</h1>
+<p>React is a <strong>JavaScript library</strong> for building user interfaces.</p>
+<h2>Installation</h2>
+<p>Install React using npm:</p>
+<pre><code class="language-bash">npm install react react-dom
+</code></pre>
+<h2>Your First Component</h2>
+<pre><code class="language-jsx">function Welcome({ name }) {
+  return &lt;h1&gt;Hello, {name}!&lt;/h1&gt;;
+}
+</code></pre>
+<blockquote>
+  <p><strong>Note:</strong> React components must start with a capital letter.</p>
+</blockquote>
+<p><a href="https://react.dev">Learn more →</a></p>
+```
+</CodeGroup>
+
+## Security
+
+The preview uses DOMPurify to sanitize HTML output, preventing XSS attacks:
+
+- **Allowed Tags**: `p`, `br`, `strong`, `em`, `b`, `i`, `ul`, `ol`, `li`, `h1`-`h6`, `blockquote`, `code`, `pre`, `a`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `hr`, `img`, `span`, `div`
+- **Allowed Attributes**: `href`, `src`, `alt`, `class`, `title`, `target`, `rel`
+- **Blocked**: `<script>`, `<iframe>`, inline event handlers, `javascript:` URLs
+
+## Implementation Details
+
+From `lib/tools/engine.ts:663-675`:
+
+```typescript
+case 'markdown-preview': {
+  const { marked } = await import('marked');
+  const { default: DOMPurify } = await import('dompurify');
+  const rawHtml = await marked.parse(input || '', { gfm: true, breaks: false }) as string;
+  const sanitized = DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['p','br','strong','em','b','i','ul','ol','li',
+                   'h1','h2','h3','h4','h5','h6','blockquote',
+                   'code','pre','a','table','thead','tbody','tr',
+                   'th','td','hr','img','span','div'],
+    ALLOWED_ATTR: ['href','src','alt','class','title','target','rel'],
+  });
+  return { output: sanitized, previewHtml: sanitized };
+}
+```
+
+<Note>
+Uses `marked` for Markdown parsing with GitHub Flavored Markdown (GFM) support, and `DOMPurify` for XSS protection.
+</Note>
+
+<Warning>
+The sanitizer removes potentially dangerous HTML. If you need to embed custom HTML or scripts, use a different approach or adjust the sanitizer configuration.
+</Warning>
+
+<Tip>
+For code syntax highlighting in the preview, consider integrating a syntax highlighter like Prism or Highlight.js in your application.
+</Tip>

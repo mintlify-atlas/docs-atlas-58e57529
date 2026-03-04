@@ -1,0 +1,420 @@
+---
+title: Data Transformation Tools
+description: Transform data between CSV, JSON, SQL, and PHP formats. Sort lists, compare sets, change text separators, convert string cases, and format SQL queries.
+---
+
+## Overview
+
+Kayston's Forge provides powerful data transformation tools for developers working with structured data, lists, and database queries. All transformations run entirely in your browser with no external server calls.
+
+## Data Format Converters
+
+<CardGroup cols={2}>
+  <Card title="JSON to CSV" icon="table" href="/tools/json-to-csv">
+    Convert JSON arrays of objects to CSV format. Automatically flattens nested objects.
+  </Card>
+  
+  <Card title="CSV to JSON" icon="table" href="/tools/csv-to-json">
+    Parse CSV files and convert to JSON arrays. Handles headers, dynamic typing, and empty lines.
+  </Card>
+  
+  <Card title="CSV to SQL INSERT" icon="database" href="/tools/csv-to-sql">
+    Generate SQL INSERT statements from CSV data. Supports multiple SQL dialects.
+  </Card>
+  
+  <Card title="SQL Formatter" icon="database" href="/tools/sql-formatter">
+    Format SQL queries with proper indentation. Supports MySQL, PostgreSQL, SQLite, and more.
+  </Card>
+  
+  <Card title="PHP to JSON" icon="code" href="/tools/php-to-json">
+    Convert PHP serialized data or PHP array syntax to JSON.
+  </Card>
+  
+  <Card title="JSON to PHP" icon="code" href="/tools/json-to-php">
+    Convert JSON to PHP serialized format or PHP array syntax.
+  </Card>
+  
+  <Card title="PHP Serializer" icon="code" href="/tools/php-serializer">
+    Serialize JSON data to PHP serialized format.
+  </Card>
+  
+  <Card title="PHP Unserializer" icon="code" href="/tools/php-unserializer">
+    Unserialize PHP data to readable JSON or PHP array syntax.
+  </Card>
+</CardGroup>
+
+## List & Text Tools
+
+<CardGroup cols={2}>
+  <Card title="List Splitter" icon="list-bullet" href="/tools/list-splitter">
+    Split lists into batches or chunks. Supports custom delimiters and multiple output templates.
+  </Card>
+  
+  <Card title="List Compare" icon="scale" href="/tools/list-compare">
+    Compare two lists to find intersection, union, differences, or unique items.
+  </Card>
+  
+  <Card title="Text Separator" icon="bars-3-bottom-left" href="/tools/text-separator">
+    Change text delimiters (comma, newline, tab, semicolon, pipe, space). Sort or deduplicate.
+  </Card>
+  
+  <Card title="Line Sort/Dedupe" icon="bars-3-bottom-left" href="/tools/line-sort">
+    Sort text lines alphabetically and remove duplicates. Case-insensitive deduplication.
+  </Card>
+  
+  <Card title="String Case Converter" icon="code" href="/tools/string-case">
+    Convert strings between camelCase, snake_case, kebab-case, PascalCase, SCREAMING_SNAKE_CASE, and Title Case.
+  </Card>
+</CardGroup>
+
+## JSON ↔ CSV Conversion
+
+Convert between JSON arrays and CSV for spreadsheet compatibility.
+
+**JSON to CSV Example**
+```json
+// Input
+[
+  {"name": "Alice", "age": 30, "city": "New York"},
+  {"name": "Bob", "age": 25, "city": "Los Angeles"}
+]
+```
+
+```csv
+# Output
+name,age,city
+Alice,30,New York
+Bob,25,Los Angeles
+```
+
+**CSV to JSON Example**
+```csv
+# Input
+name,age,city
+Alice,30,New York
+Bob,25,Los Angeles
+```
+
+```json
+// Output
+[
+  {"name": "Alice", "age": 30, "city": "New York"},
+  {"name": "Bob", "age": 25, "city": "Los Angeles"}
+]
+```
+
+<Note>
+The JSON to CSV converter automatically flattens nested objects using dot notation (e.g., `address.city` becomes a column).
+</Note>
+
+## CSV to SQL INSERT
+
+Generate INSERT statements from CSV data with support for multiple SQL dialects.
+
+**Example**
+```csv
+# Input
+id,name,email
+1,Alice,alice@example.com
+2,Bob,bob@example.com
+```
+
+```sql
+-- Output (MySQL)
+INSERT INTO table_name (id, name, email) VALUES
+(1, 'Alice', 'alice@example.com'),
+(2, 'Bob', 'bob@example.com');
+```
+
+**Supported Dialects**
+- MySQL / MariaDB
+- PostgreSQL
+- SQLite
+- Microsoft SQL Server
+- Oracle
+
+<Tip>
+Customize the table name in the second input field. The tool uses the first row as column names.
+</Tip>
+
+## SQL Formatting
+
+Format SQL queries with proper indentation and keyword capitalization.
+
+**Example**
+```sql
+-- Input
+select u.id,u.name,o.total from users u join orders o on u.id=o.user_id where o.total>100 order by o.total desc;
+
+-- Output
+SELECT
+  u.id,
+  u.name,
+  o.total
+FROM
+  users u
+  JOIN orders o ON u.id = o.user_id
+WHERE
+  o.total > 100
+ORDER BY
+  o.total DESC;
+```
+
+**Supported Dialects**
+- SQL (standard)
+- MySQL
+- PostgreSQL
+- MariaDB
+- SQLite
+- BigQuery
+- Snowflake
+- Redshift
+- Spark
+- and more...
+
+## PHP Data Conversion
+
+Kayston's Forge includes full support for PHP serialized data and PHP array syntax.
+
+**PHP Serialize to JSON**
+```php
+// Input (PHP serialized)
+a:2:{s:4:"name";s:5:"Alice";s:3:"age";i:30;}
+```
+
+```json
+// Output
+{
+  "name": "Alice",
+  "age": 30
+}
+```
+
+**PHP Array Syntax to JSON**
+```php
+// Input (PHP array syntax)
+[
+    'name' => 'Alice',
+    'age' => 30,
+    'active' => true
+]
+```
+
+```json
+// Output
+{
+  "name": "Alice",
+  "age": 30,
+  "active": true
+}
+```
+
+**JSON to PHP Array Syntax**
+```json
+// Input
+{"name": "Alice", "age": 30}
+```
+
+```php
+// Output
+[
+    'name' => 'Alice',
+    'age' => 30,
+]
+```
+
+<Note>
+The PHP parser supports both `array()` and `[]` syntax. It handles nested arrays, objects, and preserves data types (strings, integers, booleans, null).
+</Note>
+
+## List Comparison
+
+Compare two lists to find relationships between datasets.
+
+**Example: Intersection (items in both lists)**
+```text
+# List A
+apple
+banana
+cherry
+
+# List B
+banana
+cherry
+date
+
+# Output (Intersection)
+banana
+cherry
+```
+
+**Available Operations**
+- **Intersection** - Items in both lists
+- **Union** - All unique items from both lists
+- **A - B** - Items only in list A
+- **B - A** - Items only in list B
+- **Symmetric Difference** - Items in either list but not both
+
+<Tip>
+Comparison is case-insensitive and trims whitespace. Empty lines are ignored.
+</Tip>
+
+## List Splitter
+
+Split lists into equal-sized batches or chunks.
+
+**Example: Split into Groups of 3**
+```text
+# Input
+apple
+banana
+cherry
+date
+eggfruit
+fig
+
+# Output (Plain Text)
+Group 1:
+apple
+banana
+cherry
+
+Group 2:
+date
+eggfruit
+fig
+```
+
+**Output Templates**
+- **Plain Text** - Simple grouped output
+- **JSON Array** - `[["apple", "banana", "cherry"], ["date", "eggfruit", "fig"]]`
+- **Numbered List** - Groups with numeric prefixes
+
+**Split Modes**
+- **Items per Group** - Fixed number of items per group
+- **Number of Groups** - Distribute items evenly across N groups
+
+## Text Separator
+
+Change delimiters in delimited text.
+
+**Example: Comma to Newline**
+```text
+# Input (comma-separated)
+apple, banana, cherry, date
+
+# Output (newline-separated)
+apple
+banana
+cherry
+date
+```
+
+**Supported Delimiters**
+- Newline (`\n`)
+- Comma (`,`)
+- Comma + Space (`, `)
+- Semicolon (`;`)
+- Tab (`\t`)
+- Space
+- Pipe (`|`)
+- Custom (any string)
+
+**Additional Actions**
+- **Sort** - Sort items alphabetically
+- **Unique** - Remove duplicates
+- **Count** - Show item count
+
+## Line Sort/Dedupe
+
+Sort text lines and remove duplicates with advanced options.
+
+**Example**
+```text
+# Input
+banana
+apple
+cherry
+apple
+date
+
+# Output (Sort Ascending + Dedupe)
+apple
+banana
+cherry
+date
+```
+
+**Actions**
+- **Sort Ascending** - A-Z
+- **Sort Descending** - Z-A
+- **Dedupe Only** - Remove duplicates without sorting
+- **Dedupe + Sort** - Remove duplicates then sort
+
+<Note>
+Deduplication is case-insensitive and preserves the first occurrence of each unique line.
+</Note>
+
+## String Case Converter
+
+Convert between common programming case conventions.
+
+**Example**
+```text
+Input: hello_world_example
+
+camelCase:         helloWorldExample
+PascalCase:        HelloWorldExample
+snake_case:        hello_world_example
+kebab-case:        hello-world-example
+SCREAMING_SNAKE:   HELLO_WORLD_EXAMPLE
+Title Case:        Hello World Example
+```
+
+**Supported Cases**
+- **camelCase** - First word lowercase, rest capitalized
+- **PascalCase** - All words capitalized
+- **snake_case** - Lowercase with underscores
+- **kebab-case** - Lowercase with hyphens
+- **SCREAMING_SNAKE_CASE** - Uppercase with underscores
+- **Title Case** - Space-separated with capitalized words
+
+<Tip>
+The converter intelligently parses existing case conventions, so you can convert from any format to any other format.
+</Tip>
+
+## Best Practices
+
+**CSV Headers**
+
+Always include a header row in CSV files for proper column mapping. The CSV to JSON and CSV to SQL tools use the first row as field names.
+
+**SQL Dialect Selection**
+
+Choose the correct SQL dialect for your database:
+- **MySQL** - Uses backticks for identifiers
+- **PostgreSQL** - Uses double quotes for identifiers, supports advanced types
+- **SQLite** - Simpler syntax, fewer data types
+- **SQL Server** - Uses square brackets for identifiers
+
+**PHP Serialization Security**
+
+<Warning>
+Never unserialize untrusted PHP data in production applications. PHP's `unserialize()` function can execute arbitrary code if the input contains malicious object instances. Use JSON for data interchange instead.
+</Warning>
+
+**List Comparison Performance**
+
+For very large lists (>10,000 items), the comparison may take a few seconds. Consider breaking large datasets into smaller chunks.
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl + Enter` - Execute transformation
+- `Cmd/Ctrl + Shift + C` - Copy output
+- `Cmd/Ctrl + K` - Switch tools
+
+## Related Tools
+
+- [JSON Format/Validate](/tools/json-format-validate) - Validate and format JSON
+- [HTML to JSX](/tools/html-to-jsx) - Convert HTML to React JSX
+- [Markdown Preview](/tools/markdown-preview) - Render Markdown to HTML

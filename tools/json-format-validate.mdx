@@ -1,0 +1,269 @@
+---
+title: JSON Format/Validate
+description: Validate, format, and minify JSON with support for loose JSON syntax including unquoted keys and single quotes
+---
+
+The JSON Format/Validate tool provides comprehensive JSON processing capabilities including validation, pretty-printing, minification, and conversion to JavaScript object literals. It includes a permissive parser that accepts loose JSON syntax common in JavaScript.
+
+## Features
+
+- Strict and loose JSON parsing
+- Pretty-print with 2-space indentation
+- Minification for compact output
+- JavaScript object literal generation
+- Detailed error messages with parse hints
+- Automatic trailing comma removal
+- Single-quote to double-quote conversion
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="API Response Formatting" icon="code">
+    Format minified JSON from API responses for readability
+  </Card>
+  <Card title="Configuration Files" icon="file-code">
+    Validate and format JSON configuration files before deployment
+  </Card>
+  <Card title="Code Minification" icon="compress">
+    Reduce JSON payload size for network transmission
+  </Card>
+  <Card title="JavaScript Migration" icon="js">
+    Convert loose JavaScript objects to valid JSON format
+  </Card>
+</CardGroup>
+
+## Actions
+
+### Default (Format)
+
+Pretty-prints JSON with 2-space indentation:
+
+```json
+{
+  "name": "example",
+  "value": 123
+}
+```
+
+### Minify
+
+Removes all whitespace for compact output:
+
+```json
+{"name":"example","value":123}
+```
+
+### JavaScript Object
+
+Converts to JavaScript object literal syntax:
+
+```javascript
+const data = {
+  "name": "example",
+  "value": 123
+};
+```
+
+## Input Formats
+
+### Strict JSON
+
+Standard JSON with double-quoted keys:
+
+```json
+{"name": "value", "count": 42}
+```
+
+### Loose JSON
+
+JavaScript-style syntax with unquoted keys and single quotes:
+
+```javascript
+{name: 'value', count: 42, active: true}
+```
+
+<Note>
+  The loose JSON parser automatically normalizes JavaScript object syntax to valid JSON.
+</Note>
+
+## Examples
+
+<Tabs>
+  <Tab title="Format JSON">
+    Pretty-print minified JSON.
+
+    **Input:**
+    ```json
+    {"user":{"name":"Alice","age":30,"email":"alice@example.com"},"active":true}
+    ```
+
+    **Output:**
+    ```json
+    {
+      "user": {
+        "name": "Alice",
+        "age": 30,
+        "email": "alice@example.com"
+      },
+      "active": true
+    }
+    ```
+  </Tab>
+
+  <Tab title="Minify JSON">
+    Remove whitespace for compact transmission.
+
+    **Input:**
+    ```json
+    {
+      "name": "example",
+      "data": [
+        1,
+        2,
+        3
+      ]
+    }
+    ```
+
+    **Output:**
+    ```json
+    {"name":"example","data":[1,2,3]}
+    ```
+  </Tab>
+
+  <Tab title="Loose JSON Parsing">
+    Parse JavaScript object syntax.
+
+    **Input:**
+    ```javascript
+    {name: 'test', count: 42, items: ['a', 'b', 'c'],}
+    ```
+
+    **Output:**
+    ```json
+    {
+      "name": "test",
+      "count": 42,
+      "items": [
+        "a",
+        "b",
+        "c"
+      ]
+    }
+    ```
+
+    <Note>
+      Trailing commas and single quotes are automatically normalized to valid JSON.
+    </Note>
+  </Tab>
+
+  <Tab title="JavaScript Object">
+    Generate JavaScript object literal.
+
+    **Input:**
+    ```json
+    {"apiKey": "secret", "timeout": 5000}
+    ```
+
+    **Output:**
+    ```javascript
+    const data = {
+      "apiKey": "secret",
+      "timeout": 5000
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Loose JSON Parser
+
+The tool includes a permissive parser that handles common JavaScript syntax:
+
+### Supported Transformations
+
+| Input Syntax | Normalization |
+|--------------|---------------|
+| `{name: "value"}` | Unquoted keys → Quoted keys |
+| `{'name': 'value'}` | Single quotes → Double quotes |
+| `{a: 1, b: 2,}` | Trailing commas → Removed |
+| `{a:1}` | No spaces → Formatted |
+
+### Implementation
+
+From `lib/tools/engine.ts:36-59`:
+
+```typescript
+function parseJsonLoose(raw: string) {
+  const text = raw.trim();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    let s = text;
+    // 1. Quote unquoted identifier keys (e.g. {a: 1} → {"a": 1})
+    s = s.replace(/([{,]\s*)([A-Za-z_$][\w$-]*)(\s*:(?!\/))/g, '$1"$2"$3');
+    // 2. Normalize single-quoted strings to double-quoted
+    s = s.replace(/'((?:[^'\\]|\\.)*)'/g, (_, inner) =>
+      '"' + inner.replace(/"/g, '\\"').replace(/\\'/g, "'") + '"'
+    );
+    // 3. Remove trailing commas
+    s = s.replace(/,(\s*[}\]])/g, '$1');
+    return JSON.parse(s);
+  }
+}
+```
+
+## Error Handling
+
+The tool provides clear error messages:
+
+```
+JSON parse error: Unexpected token at position 23
+```
+
+Common issues:
+
+- **Unquoted keys**: Use `{"key": "value"}` not `{key: value}` in strict mode
+- **Single quotes**: Use double quotes for strings in strict mode
+- **Trailing commas**: Remove commas before closing braces/brackets
+- **Comments**: JSON does not support `//` or `/* */` comments
+
+<Warning>
+  The loose parser is designed for convenience but may accept some invalid JavaScript. Always validate critical JSON with a strict parser before deployment.
+</Warning>
+
+## Common Patterns
+
+### Validate API Response
+
+```javascript
+// Copy API response, paste into tool, check for errors
+fetch('/api/data')
+  .then(r => r.text())
+  .then(text => console.log(text)); // Paste this
+```
+
+### Format Configuration
+
+```json
+// Before: minified config
+{"database":{"host":"localhost","port":5432}}
+
+// After: formatted for readability
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432
+  }
+}
+```
+
+### Convert JS to JSON
+
+```javascript
+// JavaScript object
+const config = {name: 'app', version: '1.0.0'};
+
+// Valid JSON
+{"name": "app", "version": "1.0.0"}
+```

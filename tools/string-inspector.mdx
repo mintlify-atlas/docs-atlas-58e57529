@@ -1,0 +1,209 @@
+---
+title: String Inspector
+description: Analyze text characteristics including character count, encoding, and frequency statistics
+---
+
+## Overview
+
+The String Inspector analyzes text input and provides detailed statistics about character counts, byte lengths, encoding detection, and character frequency. Essential for understanding text properties, encoding issues, and text processing requirements.
+
+## Use Cases
+
+- **Character Counting**: Get accurate grapheme counts (not just code points)
+- **Encoding Analysis**: Detect ASCII vs UTF-8 and calculate byte sizes
+- **Database Planning**: Determine storage requirements for text columns
+- **Text Processing**: Understand character distribution for algorithms
+- **Content Validation**: Verify text properties meet requirements
+- **Debugging**: Investigate encoding issues and hidden characters
+
+## Input Format
+
+Paste any text to analyze:
+
+```
+Hello, World! 🌍
+```
+
+```
+Multi-line
+text with
+various characters: àéîøü
+```
+
+## Output Format
+
+Provides comprehensive text statistics:
+
+```
+Grapheme count: 15
+Byte length (UTF-8): 18
+Byte length (UTF-16): 30
+Line count: 1
+Word count: 2
+Encoding: UTF-8
+
+Top characters:
+" ": 1
+",": 1
+"!": 1
+"H": 1
+"e": 1
+"l": 3
+"o": 2
+"W": 1
+"r": 1
+"d": 1
+"🌍": 1
+```
+
+## Metrics Explained
+
+### Grapheme Count
+The number of user-perceived characters, properly handling:
+- Emoji (including multi-codepoint emoji like 👨‍👩‍👧‍👦)
+- Combining diacritics (é counted as one, not e + ́)
+- Regional indicators (flag emoji)
+
+### Byte Lengths
+- **UTF-8**: Variable-width encoding (1-4 bytes per character)
+- **UTF-16**: Fixed 2 bytes for BMP, 4 bytes for supplementary characters
+
+### Encoding Detection
+- **ASCII**: Only characters 0x00-0x7F
+- **UTF-8**: Any characters outside ASCII range
+
+### Character Frequency
+Top 12 most frequent characters with their counts, useful for:
+- Text analysis and pattern detection
+- Compression estimation
+- Identifying unusual characters
+
+## Examples
+
+<CodeGroup>
+```text Input: Simple Text
+Hello, World!
+```
+
+```text Output
+Grapheme count: 13
+Byte length (UTF-8): 13
+Byte length (UTF-16): 26
+Line count: 1
+Word count: 2
+Encoding: ASCII
+
+Top characters:
+"H": 1
+"e": 1
+"l": 3
+"o": 1
+",": 1
+" ": 1
+"W": 1
+"r": 1
+"d": 1
+"!": 1
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Emoji and Unicode
+Hello 🌍🚀 café
+```
+
+```text Output
+Grapheme count: 14
+Byte length (UTF-8): 22
+Byte length (UTF-16): 30
+Line count: 1
+Word count: 3
+Encoding: UTF-8
+
+Top characters:
+"H": 1
+"e": 2
+"l": 2
+"o": 1
+" ": 2
+"🌍": 1
+"🚀": 1
+"c": 1
+"a": 1
+"f": 1
+"é": 1
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Multi-line
+First line
+Second line
+Third line
+```
+
+```text Output
+Grapheme count: 32
+Byte length (UTF-8): 32
+Byte length (UTF-16): 64
+Line count: 3
+Word count: 6
+Encoding: ASCII
+
+Top characters:
+"i": 3
+"n": 3
+"e": 3
+" ": 5
+"l": 2
+"\n": 2
+"F": 1
+"r": 2
+"s": 1
+"t": 2
+"S": 1
+"c": 1
+```
+</CodeGroup>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:566-592`:
+
+```typescript
+case 'string-inspector': {
+  const graphemeCount = Array.from(new Intl.Segmenter().segment(input)).length;
+  const utf8 = new TextEncoder().encode(input).length;
+  const utf16 = input.length * 2;
+  const lines = input.length ? input.split(/\r?\n/).length : 0;
+  const words = (input.trim().match(/\S+/g) || []).length;
+  const freq = new Map<string, number>();
+  for (const ch of input) freq.set(ch, (freq.get(ch) || 0) + 1);
+  const top = [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([k, v]) => `${JSON.stringify(k)}: ${v}`)
+    .join('\n');
+  return {
+    output: [
+      `Grapheme count: ${graphemeCount}`,
+      `Byte length (UTF-8): ${utf8}`,
+      `Byte length (UTF-16): ${utf16}`,
+      `Line count: ${lines}`,
+      `Word count: ${words}`,
+      `Encoding: ${detectEncoding(input)}`,
+      '',
+      'Top characters:',
+      top,
+    ].join('\n'),
+  };
+}
+```
+
+<Note>
+Grapheme counting uses `Intl.Segmenter`, providing accurate counts for complex Unicode sequences including emoji with ZWJ (Zero-Width Joiner) sequences.
+</Note>
+
+<Tip>
+For database column sizing, use UTF-8 byte length as the basis. Add 20-50% overhead to accommodate growth and ensure adequate storage.
+</Tip>

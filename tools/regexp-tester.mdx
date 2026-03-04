@@ -1,0 +1,352 @@
+---
+title: RegExp Tester
+description: Test regular expressions against text with support for all JavaScript regex flags and capture group extraction
+---
+
+The RegExp Tester tool provides an interactive environment for testing regular expressions against sample text. It supports all JavaScript regex flags, displays match positions, and extracts capture groups for detailed pattern analysis.
+
+## Features
+
+- Full JavaScript regex syntax support
+- All standard flags (g, i, m, s, u, y)
+- Match highlighting with positions
+- Capture group extraction
+- Match count and indexing
+- Real-time error reporting
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Pattern Development" icon="code">
+    Test and refine regex patterns before using them in production code
+  </Card>
+  <Card title="Data Validation" icon="check">
+    Validate input patterns like emails, phone numbers, and URLs
+  </Card>
+  <Card title="Text Extraction" icon="scissors">
+    Extract specific data patterns from unstructured text
+  </Card>
+  <Card title="Log Parsing" icon="file-lines">
+    Build patterns to parse and extract information from log files
+  </Card>
+</CardGroup>
+
+## Regex Flags
+
+Select flags by changing the action:
+
+| Flag | Name | Description |
+|------|------|-------------|
+| `g` | Global | Find all matches (not just first) |
+| `i` | Ignore Case | Case-insensitive matching |
+| `m` | Multiline | `^` and `$` match line boundaries |
+| `s` | DotAll | `.` matches newlines |
+| `u` | Unicode | Enable full Unicode support |
+| `y` | Sticky | Match from lastIndex position |
+
+### Common Flag Combinations
+
+- **Default**: `gm` (global, multiline)
+- **Case-insensitive search**: `gi`
+- **Single match**: `i` (no global flag)
+- **Unicode text**: `gu`
+
+## Input Format
+
+### Pattern (Main Input)
+
+Enter the regular expression pattern without delimiters:
+
+```regex
+\d{3}-\d{3}-\d{4}
+```
+
+<Note>
+  Do not include `/` delimiters. Enter only the pattern. Flags are set via the action parameter.
+</Note>
+
+### Test String (Second Input)
+
+The text to test against:
+
+```
+Call me at 555-123-4567 or 555-987-6543
+```
+
+## Output Format
+
+Matches are displayed with:
+
+1. **Match number** - Sequential index
+2. **Matched text** - The captured string
+3. **Position** - Character offset in the input
+4. **Capture groups** - Named groups labeled as `g1`, `g2`, etc.
+
+```
+#1 "555-123-4567" @ 11
+#2 "555-987-6543" @ 28
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Phone Numbers">
+    Extract US phone numbers.
+
+    **Pattern:**
+    ```regex
+    \d{3}-\d{3}-\d{4}
+    ```
+
+    **Test String:**
+    ```
+    Contact: 555-123-4567 (office) or 555-987-6543 (mobile)
+    ```
+
+    **Output:**
+    ```
+    #1 "555-123-4567" @ 9
+    #2 "555-987-6543" @ 35
+    ```
+  </Tab>
+
+  <Tab title="Email Extraction">
+    Find email addresses.
+
+    **Pattern:**
+    ```regex
+    [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+    ```
+
+    **Test String:**
+    ```
+    Email alice@example.com or bob.smith@company.co.uk
+    ```
+
+    **Output:**
+    ```
+    #1 "alice@example.com" @ 6
+    #2 "bob.smith@company.co.uk" @ 27
+    ```
+
+    **Flags:** `g` (global)
+  </Tab>
+
+  <Tab title="Capture Groups">
+    Extract parts of a match using capture groups.
+
+    **Pattern:**
+    ```regex
+    (\w+)@(\w+\.\w+)
+    ```
+
+    **Test String:**
+    ```
+    Contact: support@example.com
+    ```
+
+    **Output:**
+    ```
+    #1 "support@example.com" @ 9 (g1=support, g2=example.com)
+    ```
+
+    **Groups:**
+    - `g1`: Username (`support`)
+    - `g2`: Domain (`example.com`)
+  </Tab>
+
+  <Tab title="Case-Insensitive">
+    Match regardless of case.
+
+    **Pattern:**
+    ```regex
+    error|warning|critical
+    ```
+
+    **Test String:**
+    ```
+    ERROR: disk full
+    Warning: low memory
+    CRITICAL: system shutdown
+    ```
+
+    **Flags:** `gi` (global, ignore case)
+
+    **Output:**
+    ```
+    #1 "ERROR" @ 0
+    #2 "Warning" @ 18
+    #3 "CRITICAL" @ 37
+    ```
+  </Tab>
+
+  <Tab title="Multiline Matching">
+    Match across multiple lines.
+
+    **Pattern:**
+    ```regex
+    ^\d+\.
+    ```
+
+    **Test String:**
+    ```
+    1. First item
+    2. Second item
+    3. Third item
+    ```
+
+    **Flags:** `gm` (global, multiline)
+
+    **Output:**
+    ```
+    #1 "1." @ 0
+    #2 "2." @ 15
+    #3 "3." @ 31
+    ```
+
+    <Note>
+      Without the `m` flag, `^` only matches the start of the entire string, not line starts.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:438-453`:
+
+```typescript
+case 'regexp-tester': {
+  const validFlags = /^[gimsuy]*$/.test(action) ? action : 'gm';
+  const flags = action === 'default' ? 'gm' : validFlags;
+  
+  let regex: RegExp;
+  try {
+    regex = new RegExp(input, flags);
+  } catch (e) {
+    return { output: `Invalid regular expression: ${e.message}` };
+  }
+  
+  const test = options.secondInput ?? '';
+  const matches = [...test.matchAll(regex)].map((m, i) => {
+    const groups = m.slice(1)
+      .map((g, idx) => `g${idx + 1}=${g ?? ''}`)
+      .join(', ');
+    return `#${i + 1} "${m[0]}" @ ${m.index ?? 0}${
+      groups ? ` (${groups})` : ''
+    }`;
+  });
+  
+  return { output: matches.length ? matches.join('\n') : 'No matches' };
+}
+```
+
+## Common Patterns
+
+### URL Matching
+
+```regex
+https?://[^\s]+
+```
+
+### Hex Colors
+
+```regex
+#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}
+```
+
+### IP Addresses
+
+```regex
+\b(?:\d{1,3}\.){3}\d{1,3}\b
+```
+
+### Date (YYYY-MM-DD)
+
+```regex
+\d{4}-\d{2}-\d{2}
+```
+
+### HTML Tags
+
+```regex
+<([a-z]+)([^<]+)*(?:>(.*)<\/\1>|\s+\/>)
+```
+
+### Credit Card (Simple)
+
+```regex
+\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}
+```
+
+## Character Classes
+
+| Pattern | Matches |
+|---------|----------|
+| `\d` | Any digit (0-9) |
+| `\D` | Any non-digit |
+| `\w` | Word character (a-z, A-Z, 0-9, _) |
+| `\W` | Non-word character |
+| `\s` | Whitespace (space, tab, newline) |
+| `\S` | Non-whitespace |
+| `.` | Any character (except newline) |
+| `[abc]` | Any of a, b, or c |
+| `[^abc]` | Anything except a, b, or c |
+| `[a-z]` | Lowercase letters |
+
+## Quantifiers
+
+| Pattern | Matches |
+|---------|----------|
+| `*` | 0 or more |
+| `+` | 1 or more |
+| `?` | 0 or 1 (optional) |
+| `{n}` | Exactly n times |
+| `{n,}` | n or more times |
+| `{n,m}` | Between n and m times |
+
+## Anchors
+
+| Pattern | Matches |
+|---------|----------|
+| `^` | Start of string/line |
+| `$` | End of string/line |
+| `\b` | Word boundary |
+| `\B` | Non-word boundary |
+
+## Common Mistakes
+
+<Warning>
+  **Escaping Special Characters**: Remember to escape special regex characters like `.`, `*`, `+`, `?`, `[`, `]`, `{`, `}`, `(`, `)`, `|`, `\`, `^`, `$`
+  
+  Example: Use `\.` to match a literal period
+</Warning>
+
+### Greedy vs Non-Greedy
+
+```regex
+<.*>     # Greedy: matches <b>test</b> more</b> as one match
+<.*?>    # Non-greedy: matches <b>, </b>, </b> separately
+```
+
+### Case Sensitivity
+
+By default, regex is case-sensitive. Use the `i` flag for case-insensitive matching:
+
+```regex
+test     # Matches: test
+test (i) # Matches: test, Test, TEST, TeSt
+```
+
+## Testing Strategy
+
+1. **Start simple** - Test basic patterns before adding complexity
+2. **Test edge cases** - Empty strings, special characters, very long inputs
+3. **Use capture groups** - Extract specific parts of matches
+4. **Check performance** - Avoid catastrophic backtracking with complex patterns
+5. **Validate thoroughly** - Test with both valid and invalid inputs
+
+## Related Tools
+
+- [String Inspector](/tools/string-inspector) - Analyze text characteristics
+- [Text Separator](/tools/text-separator) - Split text with custom delimiters
+- [URL Parser](/tools/url-parser) - Parse URL components

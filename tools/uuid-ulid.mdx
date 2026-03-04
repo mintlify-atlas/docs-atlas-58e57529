@@ -1,0 +1,241 @@
+---
+title: UUID/ULID Generate/Decode
+description: Generate UUID (v4, v7) and ULID identifiers, and decode ULID timestamps
+---
+
+The **UUID/ULID Generate/Decode** tool creates universally unique identifiers using industry-standard UUID formats (v4, v7) and ULID (Universally Unique Lexicographically Sortable Identifier). It also decodes ULID values to extract their embedded timestamps.
+
+## Use Cases
+
+- **Database primary keys** that need to be globally unique
+- **Distributed system identifiers** for microservices and APIs
+- **Session IDs** and authentication tokens
+- **File naming** for uploads or generated assets
+- **Sortable IDs** where chronological ordering matters (UUID v7, ULID)
+- **Debugging** to extract timestamps from ULID values
+
+## UUID vs ULID
+
+### UUID v4 (Random)
+
+- **128-bit random identifier**
+- Format: `550e8400-e29b-41d4-a716-446655440000`
+- **Not sortable** by creation time
+- **Cryptographically random** (uses Web Crypto API)
+
+### UUID v7 (Time-based, Sortable)
+
+- **128-bit identifier with timestamp prefix**
+- Format: `01890a5d-ac96-774b-bcce-b302099a8057`
+- **Sortable by creation time** (timestamp in first 48 bits)
+- Combines Unix timestamp (ms) + random bits
+
+### ULID (Universally Unique Lexicographically Sortable ID)
+
+- **128-bit identifier, 26-character Crockford Base32 encoding**
+- Format: `01H2XCEJQTF2NBREXX3VQJHP41`
+- **Sortable by creation time** (timestamp in first 10 characters)
+- **URL-safe** (no special characters, case-insensitive)
+- **Monotonic:** guarantees ordering even within the same millisecond
+
+<Note>
+  Use **UUID v4** for maximum randomness when sortability doesn't matter. Use **UUID v7** or **ULID** when you need IDs that sort chronologically. ULID has the advantage of being shorter and URL-safe.
+</Note>
+
+## Actions
+
+### Generate (Default)
+
+Generates one of each type:
+
+```
+550e8400-e29b-41d4-a716-446655440000  (UUID v4)
+01890a5d-ac96-774b-bcce-b302099a8057  (UUID v7)
+01H2XCEJQTF2NBREXX3VQJHP41           (ULID)
+```
+
+### UUID v4
+
+Generates a single random UUID v4:
+
+```
+7c9e6679-7425-40de-944b-e07fc1f90ae7
+```
+
+### UUID v7
+
+Generates a single timestamp-based UUID v7:
+
+```
+01890a5d-ac96-774b-bcce-b302099a8057
+```
+
+### ULID
+
+Generates a single ULID:
+
+```
+01H2XCEJQTF2NBREXX3VQJHP41
+```
+
+### Decode ULID
+
+Extracts the timestamp from a ULID:
+
+**Input:**
+```
+01H2XCEJQTF2NBREXX3VQJHP41
+```
+
+**Output:**
+```
+2024-03-04T10:23:45.678Z
+```
+
+## Output Format
+
+### UUID Format
+
+- **Length:** 36 characters (32 hex digits + 4 hyphens)
+- **Encoding:** Hexadecimal (0-9, a-f)
+- **Example:** `01890a5d-ac96-774b-bcce-b302099a8057`
+
+### ULID Format
+
+- **Length:** 26 characters
+- **Encoding:** Crockford Base32 (0-9, A-Z excluding I, L, O, U)
+- **Example:** `01H2XCEJQTF2NBREXX3VQJHP41`
+- **Structure:**
+  - First 10 characters: Timestamp (48 bits, milliseconds since Unix epoch)
+  - Last 16 characters: Randomness (80 bits)
+
+## Examples
+
+<CodeGroup>
+
+```text Generate All Types
+Action: Generate (default)
+
+Output:
+550e8400-e29b-41d4-a716-446655440000
+01890a5d-ac96-774b-bcce-b302099a8057
+01H2XCEJQTF2NBREXX3VQJHP41
+```
+
+```text Generate UUID v4
+Action: UUID v4
+
+Output:
+7c9e6679-7425-40de-944b-e07fc1f90ae7
+```
+
+```text Generate ULID
+Action: ULID
+
+Output:
+01H2XCEJQTF2NBREXX3VQJHP41
+```
+
+```text Decode ULID Timestamp
+Input:
+01H2XCEJQTF2NBREXX3VQJHP41
+
+Action: Decode ULID
+
+Output:
+2024-03-04T10:23:45.678Z
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:472-481`
+</Info>
+
+The tool uses these libraries:
+
+- **`uuid` package**: Generates UUID v4 and v7 using Web Crypto API
+- **`ulidx` package**: Generates monotonic ULIDs and decodes timestamps
+
+### ULID Monotonicity
+
+The tool uses `monotonicFactory()` from `ulidx` to ensure that ULIDs generated in the same millisecond have incrementing values:
+
+```javascript
+import { monotonicFactory } from 'ulidx';
+const ulidGen = monotonicFactory();
+const id1 = ulidGen(); // 01H2XCEJQTF2NBREXX3VQJHP41
+const id2 = ulidGen(); // 01H2XCEJQTF2NBREXX3VQJHP42 (increments if same ms)
+```
+
+### UUID v7 Timestamp Structure
+
+UUID v7 embeds a Unix timestamp (milliseconds) in the first 48 bits:
+
+```
+01890a5d-ac96-774b-bcce-b302099a8057
+└──────┘
+  ↑
+Timestamp (48 bits)
+```
+
+### Randomness Source
+
+Both UUID and ULID generation use **cryptographically secure random number generators**:
+
+- **Browser:** `crypto.getRandomValues()` (Web Crypto API)
+- **Node.js:** `crypto.randomBytes()` (Node.js crypto module)
+
+<Warning>
+  ULID decoding only works for valid ULID strings. If you pass a UUID or malformed string to "Decode ULID", you'll get an error or incorrect timestamp.
+</Warning>
+
+## Comparison Table
+
+| Feature | UUID v4 | UUID v7 | ULID |
+|---------|---------|---------|------|
+| **Length** | 36 chars | 36 chars | 26 chars |
+| **Sortable** | No | Yes | Yes |
+| **URL-safe** | No (hyphens) | No (hyphens) | Yes |
+| **Case-sensitive** | No | No | No |
+| **Timestamp** | No | Yes (48-bit) | Yes (48-bit) |
+| **Collision resistance** | 2^122 | 2^74 (per ms) | 2^80 (per ms) |
+| **Encoding** | Hex | Hex | Base32 |
+
+## Common Patterns
+
+### Database Primary Keys
+
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- or for sortable:
+  id UUID PRIMARY KEY DEFAULT uuid_v7(),
+  -- or ULID (stored as string):
+  id VARCHAR(26) PRIMARY KEY
+);
+```
+
+### REST API Identifiers
+
+```
+GET /api/users/01H2XCEJQTF2NBREXX3VQJHP41
+```
+
+### Sortable Log Entries
+
+```javascript
+const logEntry = {
+  id: ulid(), // Automatically sorts by creation time
+  level: 'INFO',
+  message: 'User logged in'
+};
+```
+
+## Related Tools
+
+- [Hash Generator](/tools/hash-generator) - Generate MD5/SHA hashes
+- [Random String Generator](/tools/random-string) - Generate random strings and tokens
+- [Unix Time Converter](/tools/unix-time-converter) - Convert timestamps

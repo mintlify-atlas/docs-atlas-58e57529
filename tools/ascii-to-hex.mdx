@@ -1,0 +1,141 @@
+---
+title: ASCII to Hex
+description: Convert ASCII text to space-separated hexadecimal bytes (UTF-8)
+---
+
+# ASCII to Hex
+
+Convert ASCII text to hexadecimal byte representation. Encodes input as UTF-8 and outputs space-separated hex values.
+
+## Overview
+
+The ASCII to Hex tool encodes text to hex bytes:
+- Input: Any text (ASCII, UTF-8, Unicode)
+- Output: Space-separated lowercase hex bytes
+
+Encoding uses UTF-8, so multi-byte characters (emoji, accented letters) produce multiple hex values.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Protocol construction" icon="wrench">
+    Build hex payloads for network protocols or embedded systems
+  </Card>
+  <Card title="Data embedding" icon="file-code">
+    Encode strings as hex literals for C, assembly, or configuration files
+  </Card>
+  <Card title="Debugging" icon="bug">
+    Inspect byte-level representation of text data
+  </Card>
+  <Card title="Cryptographic input" icon="lock">
+    Prepare text for hex-based hashing or encryption tools
+  </Card>
+</CardGroup>
+
+## Input Format
+
+Paste any text. Unicode and multi-byte characters are supported.
+
+```text Example
+Hello World
+```
+
+## Output
+
+Space-separated lowercase hexadecimal bytes with byte count metadata.
+
+<Accordion title="Example output">
+  **Input:**
+  ```text
+  Hello
+  ```
+  
+  **Output:**
+  ```text
+  48 65 6c 6c 6f
+  ```
+  
+  **Meta:**
+  ```text
+  5 bytes (UTF-8)
+  ```
+</Accordion>
+
+<Accordion title="Unicode example">
+  **Input:**
+  ```text
+  ☕
+  ```
+  
+  **Output:**
+  ```text
+  e2 98 95
+  ```
+  
+  **Meta:**
+  ```text
+  3 bytes (UTF-8)
+  ```
+  
+  The coffee emoji (U+2615) encodes to 3 bytes in UTF-8.
+</Accordion>
+
+## Implementation Details
+
+The tool uses `TextEncoder` to convert the input string to UTF-8 bytes, then formats each byte as a two-digit lowercase hex string.
+
+**Source:** `lib/tools/engine.ts:962-966`
+
+```typescript Key logic
+const bytes = new TextEncoder().encode(input);
+return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join(' ');
+```
+
+<Note>
+  The output is always lowercase hex. For uppercase, manually convert the output or use a text case tool.
+</Note>
+
+## Character Encoding
+
+<AccordionGroup>
+  <Accordion title="ASCII (0x00-0x7F)">
+    Single-byte characters map directly to hex:
+    - `A` → `41`
+    - `0` → `30`
+    - `\n` → `0a`
+  </Accordion>
+  
+  <Accordion title="Extended ASCII (0x80-0xFF)">
+    Characters like `é`, `ñ` encode to 2 bytes in UTF-8:
+    - `é` → `c3 a9`
+  </Accordion>
+  
+  <Accordion title="Unicode (>0xFF)">
+    Multi-byte characters (emoji, CJK, etc.) encode to 2-4 bytes:
+    - `🔥` (U+1F525) → `f0 9f 94 a5`
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  For decoding hex back to ASCII, use the [Hex to ASCII](/tools/hex-to-ascii) tool.
+</Tip>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Convert ASCII to hex
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="Hex to ASCII" href="/tools/hex-to-ascii" icon="arrow-right-arrow-left">
+    Reverse operation: convert hex bytes to ASCII text
+  </Card>
+  <Card title="Base64 String Encode/Decode" href="/tools/base64-string" icon="hashtag">
+    Encode/decode Base64 strings
+  </Card>
+  <Card title="String Inspector" href="/tools/string-inspector" icon="magnifying-glass-circle">
+    Analyze byte length, encoding, and character frequency
+  </Card>
+</CardGroup>

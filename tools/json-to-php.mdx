@@ -1,0 +1,386 @@
+---
+title: JSON to PHP
+description: Convert JSON to PHP array syntax or PHP serialized format
+---
+
+## Overview
+
+The JSON to PHP converter transforms JSON data into PHP formats. Generates either PHP serialize format for storage/transmission or PHP array syntax for code generation and configuration files.
+
+## Use Cases
+
+- **Configuration Files**: Generate PHP config arrays from JSON
+- **Database Storage**: Convert JSON to PHP serialize for legacy systems
+- **Code Generation**: Create PHP array initializers from JSON
+- **Data Migration**: Transform JSON API responses to PHP format
+- **Session Storage**: Generate PHP serialized session data
+- **Template Data**: Convert JSON fixtures to PHP arrays
+
+## Input Format
+
+Standard JSON:
+
+```json
+{
+  "name": "John",
+  "age": 30,
+  "active": true
+}
+```
+
+```json
+[
+  "apple",
+  "banana",
+  "cherry"
+]
+```
+
+```json
+{
+  "users": [
+    {"id": 1, "name": "Alice"},
+    {"id": 2, "name": "Bob"}
+  ],
+  "total": 2
+}
+```
+
+## Actions
+
+### Default (PHP Serialize)
+Convert to PHP serialize format:
+```php
+a:3:{s:4:"name";s:4:"John";s:3:"age";i:30;s:6:"active";b:1;}
+```
+
+### To Array
+Convert to PHP array syntax:
+```php
+[
+    'name' => 'John',
+    'age' => 30,
+    'active' => true,
+]
+```
+
+## Output Formats
+
+### PHP Serialized
+Compact, efficient format for storage:
+```php
+a:2:{s:2:"id";i:123;s:4:"name";s:5:"Alice";}
+```
+
+### PHP Array Syntax
+Readable format with proper indentation:
+```php
+[
+    'id' => 123,
+    'name' => 'Alice',
+    'email' => 'alice@example.com',
+    'roles' => [
+        'admin',
+        'user',
+    ],
+]
+```
+
+## Examples
+
+<CodeGroup>
+```json Input: Simple Object
+{
+  "name": "Alice",
+  "age": 28,
+  "active": true
+}
+```
+
+```php Output (Serialize)
+a:3:{s:4:"name";s:5:"Alice";s:3:"age";i:28;s:6:"active";b:1;}
+```
+
+```php Output (To Array)
+[
+    'name' => 'Alice',
+    'age' => 28,
+    'active' => true,
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Array
+[
+  "apple",
+  "banana",
+  "cherry"
+]
+```
+
+```php Output (Serialize)
+a:3:{i:0;s:5:"apple";i:1;s:6:"banana";i:2;s:6:"cherry";}
+```
+
+```php Output (To Array)
+[
+    'apple',
+    'banana',
+    'cherry',
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Nested Structure
+{
+  "user": {
+    "id": 1,
+    "name": "Alice"
+  },
+  "settings": {
+    "theme": "dark",
+    "notifications": true
+  }
+}
+```
+
+```php Output (To Array)
+[
+    'user' => [
+        'id' => 1,
+        'name' => 'Alice',
+    ],
+    'settings' => [
+        'theme' => 'dark',
+        'notifications' => true,
+    ],
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Array of Objects
+[
+  {"id": 1, "name": "Product A", "price": 99.99},
+  {"id": 2, "name": "Product B", "price": 149.99}
+]
+```
+
+```php Output (To Array)
+[
+    [
+        'id' => 1,
+        'name' => 'Product A',
+        'price' => 99.99,
+    ],
+    [
+        'id' => 2,
+        'name' => 'Product B',
+        'price' => 149.99,
+    ],
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Type Preservation
+{
+  "string": "hello",
+  "integer": 42,
+  "float": 3.14159,
+  "boolean": true,
+  "null": null
+}
+```
+
+```php Output (To Array)
+[
+    'string' => 'hello',
+    'integer' => 42,
+    'float' => 3.14159,
+    'boolean' => true,
+    'null' => null,
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Special Characters
+{
+  "name": "O'Connor",
+  "quote": "She said \"hello\"",
+  "path": "C:\\Users\\Documents"
+}
+```
+
+```php Output (To Array)
+[
+    'name' => 'O\'Connor',
+    'quote' => 'She said "hello"',
+    'path' => 'C:\\Users\\Documents',
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Config File
+{
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "name": "myapp",
+    "charset": "utf8mb4"
+  },
+  "cache": {
+    "driver": "redis",
+    "ttl": 3600
+  }
+}
+```
+
+```php Output (To Array)
+[
+    'database' => [
+        'host' => 'localhost',
+        'port' => 3306,
+        'name' => 'myapp',
+        'charset' => 'utf8mb4',
+    ],
+    'cache' => [
+        'driver' => 'redis',
+        'ttl' => 3600,
+    ],
+]
+```
+</CodeGroup>
+
+## PHP Serialize Output Format
+
+### Type Encoding
+- **NULL**: `N;`
+- **Boolean**: `b:0;` (false) or `b:1;` (true)
+- **Integer**: `i:42;`
+- **Float**: `d:3.14;`
+- **String**: `s:5:"hello";` (length:value)
+- **Array**: `a:2:{...}` (count:elements)
+
+### Array Serialization
+Sequential array:
+```php
+a:3:{i:0;s:3:"foo";i:1;s:3:"bar";i:2;s:3:"baz";}
+```
+
+Associative array:
+```php
+a:2:{s:4:"name";s:4:"John";s:3:"age";i:30;}
+```
+
+## PHP Array Syntax Format
+
+### Features
+- 4-space indentation
+- Trailing commas after each element
+- Single quotes for strings (with proper escaping)
+- Nested arrays properly indented
+- Short array syntax (`[]`) not `array()`
+
+### String Escaping
+```php
+'Simple string'
+'String with \'apostrophe\''
+'Backslash: \\'
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:763-767`:
+
+```typescript
+case 'json-to-php': {
+  const val = parseJsonLoose(input);
+  if (action === 'to-array') return { output: phpArraySyntax(val as PhpValue) };
+  return { output: phpSerialize(val as PhpValue) };
+}
+```
+
+**PHP Serialize** (`lib/tools/php-tools.ts:99-127`):
+```typescript
+export function phpSerialize(value: PhpValue): string {
+  if (value === null) return 'N;';
+  if (typeof value === 'boolean') return `b:${value ? 1 : 0};`;
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? `i:${value};` : `d:${value};`;
+  }
+  if (typeof value === 'string') {
+    const byteLen = new TextEncoder().encode(value).length;
+    return `s:${byteLen}:"${value}";`;
+  }
+  if (Array.isArray(value)) {
+    const items = value.map((v, i) => `i:${i};${phpSerialize(v)}`).join('');
+    return `a:${value.length}:{${items}}`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    const items = entries
+      .map(([k, v]) => {
+        const key = /^\d+$/.test(k)
+          ? `i:${parseInt(k)};`
+          : `s:${new TextEncoder().encode(k).length}:"${k}";`;
+        return key + phpSerialize(v);
+      })
+      .join('');
+    return `a:${entries.length}:{${items}}`;
+  }
+  return 'N;';
+}
+```
+
+**PHP Array Syntax** (`lib/tools/php-tools.ts:130-160`):
+```typescript
+export function phpArraySyntax(value: PhpValue, indent = 0): string {
+  const pad = '    '.repeat(indent);
+  const inner = '    '.repeat(indent + 1);
+
+  if (value === null) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string') {
+    return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' `;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const items = value
+      .map((v) => `${inner}${phpArraySyntax(v, indent + 1)}`)
+      .join(',\n');
+    return `[\n${items},\n${pad}]`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (entries.length === 0) return '[]';
+    const items = entries
+      .map(([k, v]) => {
+        const key = /^\d+$/.test(k) ? k : `'${k}'`;
+        return `${inner}${key} => ${phpArraySyntax(v, indent + 1)}`;
+      })
+      .join(',\n');
+    return `[\n${items},\n${pad}]`;
+  }
+  return 'null';
+}
+```
+
+<Note>
+The JSON to PHP converter uses UTF-8 byte length for string serialization, ensuring correct handling of multibyte characters (emoji, Unicode, etc.).
+</Note>
+
+<Tip>
+For PHP config files, use the "To Array" action to generate clean, readable PHP array syntax. Wrap the output with `<?php\n\nreturn ` and `;` to create a valid PHP file.
+</Tip>
+
+<Warning>
+- Serialized PHP data should only be unserialized in trusted contexts
+- The serializer generates modern short array syntax (`[]`), not compatible with PHP versions before 5.4
+- Very deeply nested JSON structures may cause stack overflow during serialization
+</Warning>

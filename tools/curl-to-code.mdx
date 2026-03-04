@@ -1,0 +1,155 @@
+---
+title: cURL to Code
+description: Convert cURL commands to JavaScript fetch, Python requests, or PHP cURL code
+---
+
+# cURL to Code
+
+Convert cURL commands to executable code in JavaScript, Python, or PHP. Automatically extracts HTTP method, URL, headers, body, and authentication.
+
+## Overview
+
+The cURL to Code tool parses cURL command-line syntax and generates equivalent code for:
+- **JavaScript** (fetch API)
+- **Python** (requests library)
+- **PHP** (curl extension)
+
+Supports multiline commands (with backslash continuations), quoted arguments, and common cURL flags.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="API exploration" icon="magnifying-glass">
+    Copy a cURL request from browser DevTools and convert it to working code for your project
+  </Card>
+  <Card title="Documentation samples" icon="book">
+    Generate code examples in multiple languages from a single cURL command
+  </Card>
+  <Card title="Testing & debugging" icon="bug">
+    Quickly reproduce API requests in your language of choice
+  </Card>
+  <Card title="Migration" icon="arrows-rotate">
+    Convert legacy cURL scripts to modern HTTP client code
+  </Card>
+</CardGroup>
+
+## Supported cURL Flags
+
+<AccordionGroup>
+  <Accordion title="Method & URL">
+    - `-X`, `--request` — HTTP method (GET, POST, PUT, DELETE, etc.)
+    - First non-flag argument — URL
+  </Accordion>
+  
+  <Accordion title="Headers & body">
+    - `-H`, `--header` — HTTP headers (e.g., `Content-Type: application/json`)
+    - `-d`, `--data`, `--data-raw`, `--data-binary` — Request body (implies POST if method not set)
+  </Accordion>
+  
+  <Accordion title="Authentication">
+    - `-u`, `--user` — Basic authentication (username:password)
+  </Accordion>
+</AccordionGroup>
+
+## Input Format
+
+Paste a cURL command. The tool handles:
+- Single-line or multiline (backslash-continued) commands
+- Single or double-quoted arguments
+- Optional `curl` prefix
+
+```bash Example
+curl -X POST https://api.example.com/users \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d '{"name":"Alice","email":"alice@example.com"}'
+```
+
+## Output Formats
+
+<Tabs>
+  <Tab title="JavaScript (fetch)">
+    Generates `fetch()` calls with method, headers, and body.
+    
+    ```javascript
+    const response = await fetch("https://api.example.com/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer token123",
+      },
+      body: '{"name":"Alice","email":"alice@example.com"}',
+    });
+    const data = await response.json();
+    ```
+  </Tab>
+  
+  <Tab title="Python (requests)">
+    Generates `requests.post()` (or `.get()`, `.put()`, etc.) with headers, data, and optional `auth` tuple.
+    
+    ```python
+    import requests
+
+    headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer token123"
+    }
+
+    data = '{"name":"Alice","email":"alice@example.com"}'
+
+    response = requests.post("https://api.example.com/users", headers=headers, data=data)
+    print(response.json())
+    ```
+  </Tab>
+  
+  <Tab title="PHP (cURL)">
+    Generates `curl_setopt()` calls for method, URL, headers, body, and authentication.
+    
+    ```php
+    <?php
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://api.example.com/users");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Content-Type: application/json",
+        "Authorization: Bearer token123"
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, '{"name":"Alice","email":"alice@example.com"}');
+    $response = curl_exec($ch);
+    curl_close($ch);
+    $data = json_decode($response, true);
+    ?>
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+The tool tokenizes the input command, respecting shell quoting rules:
+1. Split on whitespace, preserving quoted strings
+2. Extract method, URL, headers, body, and auth from flags
+3. Generate idiomatic code for each target language
+
+**Source:** `lib/tools/curl-to-code.ts:64-124`
+
+<Note>
+  The parser handles basic cURL syntax. Complex shell features (pipes, redirects, environment variables) are not supported.
+</Note>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Convert to JavaScript (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="JSON to Code" href="/tools/json-to-code" icon="code">
+    Generate TypeScript/Python/Go/Rust types from JSON
+  </Card>
+  <Card title="URL Parser" href="/tools/url-parser" icon="link">
+    Break down URL components and query parameters
+  </Card>
+</CardGroup>

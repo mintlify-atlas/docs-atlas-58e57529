@@ -1,0 +1,424 @@
+---
+title: Formatting & Beautification Tools
+description: Format, beautify, and minify HTML, CSS, JavaScript, XML, and other code formats. Convert between JSON, YAML, color formats, number bases, and more.
+---
+
+## Overview
+
+Kayston's Forge provides powerful formatting and beautification tools for web developers. All formatting happens in your browser with no data sent to external servers.
+
+## Code Beautifiers
+
+<CardGroup cols={2}>
+  <Card title="HTML Beautify/Minify" icon="sparkles" href="/tools/html-beautify">
+    Format HTML with proper indentation or minify to remove whitespace and comments.
+  </Card>
+  
+  <Card title="CSS Beautify/Minify" icon="paint-brush" href="/tools/css-beautify">
+    Format CSS with consistent indentation or minify to reduce file size.
+  </Card>
+  
+  <Card title="JavaScript Beautify/Minify" icon="flask" href="/tools/js-beautify">
+    Format JavaScript/TypeScript with proper indentation or minify with Terser for production.
+  </Card>
+  
+  <Card title="XML Beautify/Minify" icon="document-text" href="/tools/xml-beautify">
+    Format and validate XML documents or minify to remove whitespace.
+  </Card>
+  
+  <Card title="LESS Beautify/Minify" icon="paint-brush" href="/tools/less-beautify">
+    Format LESS stylesheets with proper indentation or minify.
+  </Card>
+  
+  <Card title="SCSS Beautify/Minify" icon="paint-brush" href="/tools/scss-beautify">
+    Format SCSS/Sass stylesheets with proper indentation or minify.
+  </Card>
+  
+  <Card title="ERB Beautify/Minify" icon="code" href="/tools/erb-beautify">
+    Format Ruby ERB templates with proper indentation.
+  </Card>
+</CardGroup>
+
+## Format Converters
+
+<CardGroup cols={2}>
+  <Card title="YAML to JSON" icon="arrow-right" href="/tools/yaml-to-json">
+    Convert YAML documents to JSON format. Supports multi-document YAML files.
+  </Card>
+  
+  <Card title="JSON to YAML" icon="arrow-right" href="/tools/json-to-yaml">
+    Convert JSON to clean, readable YAML format.
+  </Card>
+  
+  <Card title="Number Base Converter" icon="hashtag" href="/tools/number-base">
+    Convert numbers between binary, octal, decimal, and hexadecimal bases.
+  </Card>
+  
+  <Card title="Color Converter" icon="paint-brush" href="/tools/color-converter">
+    Convert between HEX, RGB, RGBA, HSL, HSLA, and HSV color formats.
+  </Card>
+  
+  <Card title="SVG to CSS" icon="paint-brush" href="/tools/svg-to-css">
+    Embed SVG as CSS background-image using Base64 or URL encoding.
+  </Card>
+  
+  <Card title="Hex to ASCII" icon="hashtag" href="/tools/hex-to-ascii">
+    Convert hex byte sequences to ASCII/UTF-8 text.
+  </Card>
+  
+  <Card title="ASCII to Hex" icon="hashtag" href="/tools/ascii-to-hex">
+    Convert ASCII/UTF-8 text to hex byte representation.
+  </Card>
+  
+  <Card title="cURL to Code" icon="code" href="/tools/curl-to-code">
+    Convert cURL commands to JavaScript fetch, Python requests, or PHP cURL code.
+  </Card>
+  
+  <Card title="JSON to Code" icon="code" href="/tools/json-to-code">
+    Generate TypeScript interfaces, Python dataclasses, Go structs, or Rust structs from JSON.
+  </Card>
+</CardGroup>
+
+## HTML Beautification
+
+The HTML beautifier intelligently indents tags and handles void elements correctly.
+
+**Example: Beautify**
+```html
+<!-- Input -->
+<div><p>Hello</p><img src="logo.png"/><span>World</span></div>
+
+<!-- Output -->
+<div>
+  <p>Hello</p>
+  <img src="logo.png"/>
+  <span>World</span>
+</div>
+```
+
+**Example: Minify**
+```html
+<!-- Input -->
+<div>
+  <!-- Comment -->
+  <p>Hello World</p>
+</div>
+
+<!-- Output -->
+<div><p>Hello World</p></div>
+```
+
+<Note>
+The minifier removes HTML comments and collapses whitespace between tags. Whitespace inside text nodes is preserved.
+</Note>
+
+## CSS/LESS/SCSS Formatting
+
+All CSS-based tools share the same beautifier engine with proper indentation of rules and properties.
+
+**Example: Beautify**
+```css
+/* Input */
+.container{display:flex;flex-direction:column;}.item{margin:10px;padding:5px;}
+
+/* Output */
+.container {
+  display: flex;
+  flex-direction: column;
+}
+.item {
+  margin: 10px;
+  padding: 5px;
+}
+```
+
+**Example: Minify**
+```css
+/* Input */
+.container {
+  display: flex;
+  /* This is a comment */
+  flex-direction: column;
+}
+
+/* Output */
+.container{display:flex;flex-direction:column}
+```
+
+## JavaScript Minification
+
+The JavaScript minifier uses **Terser**, the industry-standard minifier for production builds.
+
+**Example**
+```javascript
+// Input
+function greet(name) {
+  const message = `Hello, ${name}!`;
+  console.log(message);
+}
+
+// Minified Output
+function greet(e){const s=`Hello, ${e}!`;console.log(s)}
+```
+
+<Warning>
+The minifier performs advanced optimizations including variable name mangling and dead code elimination. Do not use minified code for debugging.
+</Warning>
+
+## YAML ↔ JSON Conversion
+
+The YAML to JSON converter supports:
+- Multi-document YAML files (outputs JSON array)
+- Comments (stripped during conversion)
+- Complex nested structures
+- Arrays and objects
+
+**Example: YAML to JSON**
+```yaml
+# Input
+name: John Doe
+age: 30
+address:
+  city: New York
+  zip: 10001
+```
+
+```json
+// Output
+{
+  "name": "John Doe",
+  "age": 30,
+  "address": {
+    "city": "New York",
+    "zip": 10001
+  }
+}
+```
+
+**Example: JSON to YAML**
+```json
+// Input
+{"name": "John Doe", "age": 30}
+```
+
+```yaml
+# Output
+name: John Doe
+age: 30
+```
+
+## Number Base Converter
+
+Convert numbers between binary, octal, decimal, and hexadecimal. Input format: `value|base`
+
+**Example**
+```text
+Input:  255|10
+
+Binary:  11111111
+Octal:   377
+Decimal: 255
+Hex:     FF
+```
+
+**Supported bases**: 2-36
+
+<Note>
+The converter supports negative numbers and uses BigInt for arbitrary precision.
+</Note>
+
+## Color Converter
+
+Convert between all major color formats with automatic detection.
+
+**Supported Formats**
+- HEX: `#ff5733`, `#f57` (shorthand), `#ff5733aa` (with alpha)
+- RGB: `rgb(255, 87, 51)`, `rgba(255, 87, 51, 0.8)`
+- HSL: `hsl(9, 100%, 60%)`, `hsla(9, 100%, 60%, 0.8)`
+- HSV: `hsv(9, 80%, 100%)`, `hsva(9, 80%, 100%, 0.8)`
+
+**Example**
+```text
+Input:  #ff5733
+
+HEX:  #ff5733
+RGB:  rgb(255, 87, 51)
+HSL:  hsl(9, 100%, 60%)
+HSV:  hsv(9, 80%, 100%)
+
+--color: #ff5733;
+--color-rgb: 255, 87, 51;
+```
+
+<Tip>
+The converter generates CSS custom properties ready to copy into your stylesheet.
+</Tip>
+
+## SVG to CSS Embedding
+
+Embed SVG graphics as CSS `background-image` data URLs.
+
+**Example: Base64 Encoding**
+```svg
+<!-- Input -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <circle cx="12" cy="12" r="10" fill="#ff5733"/>
+</svg>
+```
+
+```css
+/* Output */
+.icon {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNmZjU3MzMiLz48L3N2Zz4=");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+**Example: URL Encoding** (smaller output)
+```css
+.icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23ff5733'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+## cURL to Code Conversion
+
+Paste any cURL command and convert it to working code in JavaScript, Python, or PHP.
+
+**Example Input**
+```bash
+curl -X POST https://api.example.com/data \
+  -H "Authorization: Bearer token123" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John"}'
+```
+
+**JavaScript (fetch) Output**
+```javascript
+const response = await fetch("https://api.example.com/data", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer token123",
+    "Content-Type": "application/json",
+  },
+  body: '{"name": "John"}',
+});
+const data = await response.json();
+```
+
+**Python (requests) Output**
+```python
+import requests
+
+headers = {
+  "Authorization": "Bearer token123",
+  "Content-Type": "application/json"
+}
+
+data = '{"name": "John"}'
+
+response = requests.post("https://api.example.com/data", headers=headers, data=data)
+print(response.json())
+```
+
+## JSON to Code Generation
+
+Generate strongly-typed data structures from JSON.
+
+**Example Input**
+```json
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john@example.com"
+}
+```
+
+**TypeScript Output**
+```typescript
+interface Root {
+  name: string;
+  age: number;
+  email: string;
+}
+```
+
+**Python Output**
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Root:
+    name: str
+    age: int
+    email: str
+```
+
+**Go Output**
+```go
+type Root struct {
+    Name  string `json:"name"`
+    Age   int    `json:"age"`
+    Email string `json:"email"`
+}
+```
+
+## Hex ↔ ASCII Conversion
+
+**ASCII to Hex**
+```text
+Input:  Hello
+Output: 48 65 6c 6c 6f
+```
+
+**Hex to ASCII**
+```text
+Input:  48656c6c6f
+Output: Hello
+```
+
+<Note>
+The hex converter supports UTF-8 encoding and handles multibyte characters correctly.
+</Note>
+
+## Best Practices
+
+**Minify for Production Only**
+
+Always keep beautified source files for development. Only minify code for production deployment to:
+- Reduce file size and bandwidth
+- Improve page load performance
+- (JavaScript only) Obfuscate variable names
+
+**Validate XML Before Beautifying**
+
+The XML beautifier includes validation. If your XML is malformed, you'll receive an error message before formatting.
+
+**Use Color Variables**
+
+When using the Color Converter, copy the generated CSS custom properties for maintainable stylesheets:
+```css
+:root {
+  --brand-primary: #ff5733;
+  --brand-primary-rgb: 255, 87, 51;
+}
+```
+
+**Test Generated Code**
+
+Always test code generated from cURL or JSON. The converters handle common cases but may not support all advanced features.
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl + Enter` - Execute format/conversion
+- `Cmd/Ctrl + Shift + C` - Copy output
+- `Cmd/Ctrl + K` - Switch tools
+
+## Related Tools
+
+- [JSON Format/Validate](/tools/json-format-validate) - Format and validate JSON with loose parsing
+- [SQL Formatter](/tools/sql-formatter) - Format SQL queries with dialect support
+- [Markdown Preview](/tools/markdown-preview) - Render Markdown to sanitized HTML

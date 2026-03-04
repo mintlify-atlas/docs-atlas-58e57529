@@ -1,0 +1,386 @@
+---
+title: YAML to JSON
+description: Convert YAML documents to JSON format with support for multi-document YAML files
+---
+
+The **YAML to JSON** tool converts YAML (YAML Ain't Markup Language) documents into JSON format. It handles both single-document and multi-document YAML files, making it essential for working with configuration files, CI/CD pipelines, and data interchange.
+
+## Use Cases
+
+- **Converting Kubernetes manifests** to JSON for programmatic processing
+- **Transforming CI/CD configs** (GitHub Actions, GitLab CI) to JSON
+- **Parsing YAML config files** for API consumption
+- **Validating YAML syntax** by converting to JSON
+- **Processing multi-document YAML** (e.g., Kubernetes resources with `---` separators)
+- **Data interchange** between YAML-based and JSON-based systems
+
+## How It Works
+
+The tool uses the **`js-yaml` library** to parse YAML syntax and convert it to JavaScript objects, then serializes to JSON:
+
+1. **Parse YAML** using `yamlLoadAll()` (supports multi-document)
+2. **Detect document count:**
+   - Single document → Output single JSON object
+   - Multiple documents → Output JSON array of objects
+3. **Serialize to JSON** with 2-space indentation
+
+<Note>
+  The tool automatically detects multi-document YAML (documents separated by `---`) and outputs a JSON array when multiple documents are found.
+</Note>
+
+## Input Format
+
+### Single-Document YAML
+
+```yaml
+name: John Doe
+age: 30
+address:
+  street: 123 Main St
+  city: New York
+  zip: "10001"
+hobby:
+  - reading
+  - hiking
+  - coding
+```
+
+### Multi-Document YAML
+
+```yaml
+---
+kind: Deployment
+metadata:
+  name: app-deployment
+spec:
+  replicas: 3
+---
+kind: Service
+metadata:
+  name: app-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+```
+
+## Output Format
+
+### Single Document → JSON Object
+
+```json
+{
+  "name": "John Doe",
+  "age": 30,
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zip": "10001"
+  },
+  "hobby": [
+    "reading",
+    "hiking",
+    "coding"
+  ]
+}
+```
+
+### Multiple Documents → JSON Array
+
+```json
+[
+  {
+    "kind": "Deployment",
+    "metadata": {
+      "name": "app-deployment"
+    },
+    "spec": {
+      "replicas": 3
+    }
+  },
+  {
+    "kind": "Service",
+    "metadata": {
+      "name": "app-service"
+    },
+    "spec": {
+      "type": "ClusterIP",
+      "ports": [
+        { "port": 80 }
+      ]
+    }
+  }
+]
+```
+
+## Examples
+
+<CodeGroup>
+
+```yaml Simple Configuration
+Input:
+app:
+  name: MyApp
+  version: 1.2.3
+  debug: true
+  features:
+    - auth
+    - api
+    - admin
+
+Output:
+{
+  "app": {
+    "name": "MyApp",
+    "version": "1.2.3",
+    "debug": true,
+    "features": ["auth", "api", "admin"]
+  }
+}
+```
+
+```yaml Docker Compose
+Input:
+version: "3.8"
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    environment:
+      NODE_ENV: production
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: secret
+
+Output:
+{
+  "version": "3.8",
+  "services": {
+    "web": {
+      "image": "nginx:latest",
+      "ports": ["80:80"],
+      "environment": {"NODE_ENV": "production"}
+    },
+    "db": {
+      "image": "postgres:14",
+      "environment": {"POSTGRES_PASSWORD": "secret"}
+    }
+  }
+}
+```
+
+```yaml GitHub Actions Workflow
+Input:
+name: CI
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: npm test
+
+Output:
+{
+  "name": "CI",
+  "on": {
+    "push": {"branches": ["main"]}
+  },
+  "jobs": {
+    "build": {
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {"uses": "actions/checkout@v3"},
+        {"name": "Run tests", "run": "npm test"}
+      ]
+    }
+  }
+}
+```
+
+```yaml Multi-Document Kubernetes
+Input:
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  LOG_LEVEL: info
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret
+type: Opaque
+data:
+  password: c2VjcmV0
+
+Output:
+[
+  {
+    "apiVersion": "v1",
+    "kind": "ConfigMap",
+    "metadata": {"name": "app-config"},
+    "data": {"LOG_LEVEL": "info"}
+  },
+  {
+    "apiVersion": "v1",
+    "kind": "Secret",
+    "metadata": {"name": "app-secret"},
+    "type": "Opaque",
+    "data": {"password": "c2VjcmV0"}
+  }
+]
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:497-501`
+</Info>
+
+The tool uses **`js-yaml`** (YAML 1.2 parser):
+
+```typescript
+import { loadAll as yamlLoadAll } from 'js-yaml';
+
+const docs = yamlLoadAll(input);
+if (docs.length === 1) {
+  return { output: JSON.stringify(docs[0], null, 2) };
+}
+return { output: JSON.stringify(docs, null, 2) };
+```
+
+### YAML Features Supported
+
+- **Scalars:** strings, numbers, booleans, null
+- **Collections:** sequences (arrays), mappings (objects)
+- **Multi-line strings:** literal (`|`) and folded (`>`) blocks
+- **Anchors and aliases:** `&anchor` and `*alias` references
+- **Comments:** Parsed but not preserved in JSON output
+- **Multi-document files:** Separated by `---`
+
+### Type Conversion
+
+| YAML | JSON |
+|------|------|
+| `true`, `false`, `yes`, `no` | `true`, `false` |
+| `123`, `0x1A`, `0o17` | `123` (decimal) |
+| `1.23`, `1.23e4`, `.inf` | `1.23`, `12300`, `null` |
+| `null`, `~` | `null` |
+| `"quoted"`, `unquoted` | `"string"` |
+| `2024-03-04` | `"2024-03-04"` (string) |
+
+<Warning>
+  YAML **date objects** (e.g., `2024-03-04`) are converted to ISO 8601 strings in JSON, not Date objects. YAML **binary data** (`!!binary`) is converted to base64 strings.
+</Warning>
+
+## YAML Syntax Tips
+
+### Preserving Numeric Strings
+
+Quote numbers that should remain strings:
+
+```yaml
+zip_code: "10001"  # String, not number
+port: 8080         # Number
+```
+
+### Multi-line Strings
+
+```yaml
+# Literal block (preserves newlines)
+description: |
+  Line 1
+  Line 2
+  Line 3
+
+# Folded block (collapses newlines to spaces)
+summary: >
+  This is a long
+  sentence that will
+  be on one line.
+```
+
+### Anchors and Aliases
+
+```yaml
+defaults: &defaults
+  timeout: 30
+  retries: 3
+
+service1:
+  <<: *defaults
+  name: Service 1
+
+service2:
+  <<: *defaults
+  name: Service 2
+```
+
+Converts to:
+
+```json
+{
+  "defaults": {"timeout": 30, "retries": 3},
+  "service1": {"timeout": 30, "retries": 3, "name": "Service 1"},
+  "service2": {"timeout": 30, "retries": 3, "name": "Service 2"}
+}
+```
+
+## Common Errors
+
+<Accordion title="YAML parse error: bad indentation">
+  YAML is **indentation-sensitive** (like Python). Use consistent spaces (2 or 4) for indentation. Do not mix tabs and spaces.
+
+  ```yaml
+  # ❌ Incorrect (mixed indentation)
+  parent:
+      child: value
+  
+  # ✅ Correct (consistent 2-space indentation)
+  parent:
+    child: value
+  ```
+</Accordion>
+
+<Accordion title="Unexpected key-value pair">
+  Ensure colons (`:`) are followed by a space:
+
+  ```yaml
+  # ❌ Incorrect (no space after colon)
+  key:value
+  
+  # ✅ Correct
+  key: value
+  ```
+</Accordion>
+
+<Accordion title="Multi-document separator not recognized">
+  The separator `---` must be on its own line:
+
+  ```yaml
+  # ❌ Incorrect
+  doc1: value ---
+  doc2: value
+  
+  # ✅ Correct
+  doc1: value
+  ---
+  doc2: value
+  ```
+</Accordion>
+
+## Related Tools
+
+- [JSON to YAML](/tools/json-to-yaml) - Reverse conversion (JSON → YAML)
+- [JSON Format/Validate](/tools/json-format-validate) - Validate and format JSON output
+- [JSON to CSV](/tools/json-to-csv) - Convert JSON arrays to CSV

@@ -1,0 +1,351 @@
+---
+title: URL Encode/Decode
+description: Encode and decode URL components with support for standard encoding, form encoding, and component-level encoding
+---
+
+The URL Encode/Decode tool handles URL percent-encoding (also known as URL encoding) for safely transmitting data in URLs. It supports multiple encoding modes including URI encoding, component encoding, and form encoding with space handling.
+
+## Features
+
+- Standard URI encoding (RFC 3986)
+- Component-level encoding for query parameters
+- Form encoding with space-to-plus conversion
+- Bidirectional encoding/decoding
+- Preserves safe characters
+- Handles international (UTF-8) characters
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Query Parameters" icon="link">
+    Encode values for safe inclusion in URL query strings
+  </Card>
+  <Card title="Form Submissions" icon="file-text">
+    Encode form data using application/x-www-form-urlencoded format
+  </Card>
+  <Card title="API Requests" icon="code">
+    Prepare URL parameters for HTTP API calls
+  </Card>
+  <Card title="URL Parsing" icon="magnifying-glass">
+    Decode percent-encoded URLs to read original values
+  </Card>
+</CardGroup>
+
+## Encoding Modes
+
+### Default (URI Encoding)
+
+Encodes characters unsafe for URLs but preserves some delimiters:
+
+```
+hello world&foo=bar → hello%20world&foo=bar
+```
+
+<Note>
+  URI encoding preserves these characters: `A-Z a-z 0-9 - _ . ! ~ * ' ( )` plus URI delimiters `;/?:@&=+$,#`
+</Note>
+
+### Component Encoding
+
+Encodes all special characters including delimiters:
+
+```
+hello world&foo=bar → hello%20world%26foo%3Dbar
+```
+
+Use this for individual query parameter values.
+
+### Form Encoding
+
+Like component encoding but uses `+` for spaces:
+
+```
+hello world&foo=bar → hello+world%26foo%3Dbar
+```
+
+This is the `application/x-www-form-urlencoded` format.
+
+## Actions
+
+| Action | Description | Space Handling |
+|--------|-------------|----------------|
+| `default` | URI encode | `%20` |
+| `component` | Component encode | `%20` |
+| `form` | Form encode | `+` |
+| `decode` | URI decode | Both `%20` and `+` |
+| `form-decode` | Form decode | `+` → space |
+
+## Examples
+
+<Tabs>
+  <Tab title="Encode Query Param">
+    Encode a value for use in a query string.
+
+    **Input:**
+    ```
+    user@example.com
+    ```
+
+    **Action:** `component`
+
+    **Output:**
+    ```
+    user%40example.com
+    ```
+
+    **Usage:**
+    ```
+    https://api.example.com/users?email=user%40example.com
+    ```
+  </Tab>
+
+  <Tab title="Decode URL">
+    Decode a percent-encoded URL.
+
+    **Input:**
+    ```
+    https%3A%2F%2Fexample.com%2Fsearch%3Fq%3Dhello%20world
+    ```
+
+    **Action:** `decode`
+
+    **Output:**
+    ```
+    https://example.com/search?q=hello world
+    ```
+  </Tab>
+
+  <Tab title="Form Encoding">
+    Encode form data with spaces as plus signs.
+
+    **Input:**
+    ```
+    John Doe <john@example.com>
+    ```
+
+    **Action:** `form`
+
+    **Output:**
+    ```
+    John+Doe+%3Cjohn%40example.com%3E
+    ```
+
+    **POST Body:**
+    ```
+    Content-Type: application/x-www-form-urlencoded
+    
+    name=John+Doe+%3Cjohn%40example.com%3E
+    ```
+  </Tab>
+
+  <Tab title="International Text">
+    Encode Unicode characters.
+
+    **Input:**
+    ```
+    Hello 世界! 🌍
+    ```
+
+    **Action:** `component`
+
+    **Output:**
+    ```
+    Hello%20%E4%B8%96%E7%95%8C!%20%F0%9F%8C%8D
+    ```
+
+    <Note>
+      UTF-8 bytes are percent-encoded. The emoji `🌍` becomes `%F0%9F%8C%8D` (4 bytes).
+    </Note>
+  </Tab>
+
+  <Tab title="Preserve Delimiters">
+    URI encoding preserves path and query delimiters.
+
+    **Input:**
+    ```
+    /api/v1/users?name=John Doe&active=true
+    ```
+
+    **Action:** `default`
+
+    **Output:**
+    ```
+    /api/v1/users?name=John%20Doe&active=true
+    ```
+
+    **Action:** `component`
+
+    **Output:**
+    ```
+    %2Fapi%2Fv1%2Fusers%3Fname%3DJohn%20Doe%26active%3Dtrue
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:455-461`:
+
+```typescript
+case 'url-encode-decode': {
+  if (action === 'decode') 
+    return { output: decodeURIComponent(input) };
+  if (action === 'form-decode') 
+    return { output: decodeURIComponent(input.replaceAll('+', ' ')) };
+  if (action === 'component') 
+    return { output: encodeURIComponent(input) };
+  if (action === 'form') 
+    return { output: encodeURIComponent(input).replaceAll('%20', '+') };
+  return { output: encodeURI(input) };
+}
+```
+
+## Character Encoding Reference
+
+### Always Safe (Never Encoded)
+
+```
+A-Z a-z 0-9 - _ . ~ 
+```
+
+### URI Delimiters (Preserved by `encodeURI`)
+
+```
+: / ? # [ ] @ ! $ & ' ( ) * + , ; =
+```
+
+### Common Encodings
+
+| Character | Encoded | Description |
+|-----------|---------|-------------|
+| (space) | `%20` or `+` | Space |
+| `!` | `%21` | Exclamation |
+| `#` | `%23` | Hash/pound |
+| `$` | `%24` | Dollar |
+| `%` | `%25` | Percent |
+| `&` | `%26` | Ampersand |
+| `+` | `%2B` | Plus |
+| `/` | `%2F` | Forward slash |
+| `:` | `%3A` | Colon |
+| `=` | `%3D` | Equals |
+| `?` | `%3F` | Question mark |
+| `@` | `%40` | At sign |
+
+## Common Patterns
+
+### Building Query Strings
+
+```javascript
+const params = {
+  q: 'hello world',
+  filter: 'category:books',
+  limit: 10
+};
+
+const query = Object.entries(params)
+  .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+  .join('&');
+
+// Result: q=hello%20world&filter=category%3Abooks&limit=10
+```
+
+### Decoding URL Parameters
+
+```javascript
+const url = new URL('https://example.com?name=John%20Doe&email=john%40example.com');
+const name = url.searchParams.get('name');   // "John Doe"
+const email = url.searchParams.get('email'); // "john@example.com"
+```
+
+### Form POST Body
+
+```javascript
+const formData = {
+  username: 'john@example',
+  password: 'p@ssw0rd!',
+  remember: 'true'
+};
+
+const body = Object.entries(formData)
+  .map(([k, v]) => `${k}=${encodeURIComponent(v).replaceAll('%20', '+')}` )
+  .join('&');
+
+// Content-Type: application/x-www-form-urlencoded
+// username=john%40example&password=p%40ssw0rd!&remember=true
+```
+
+## URI vs Component Encoding
+
+<Tabs>
+  <Tab title="encodeURI()">
+    **Use for:** Entire URLs
+    
+    **Preserves:** `: / ? # [ ] @ ! $ & ' ( ) * + , ; =`
+    
+    **Example:**
+    ```javascript
+    encodeURI('https://example.com/path?q=hello world')
+    // → https://example.com/path?q=hello%20world
+    ```
+    
+    ✅ Good for encoding full URLs while keeping structure
+  </Tab>
+
+  <Tab title="encodeURIComponent()">
+    **Use for:** Individual parameter values
+    
+    **Encodes:** Everything except `A-Z a-z 0-9 - _ . ! ~ * ' ( )`
+    
+    **Example:**
+    ```javascript
+    encodeURIComponent('hello world & goodbye')
+    // → hello%20world%20%26%20goodbye
+    ```
+    
+    ✅ Good for query parameter values and path segments
+  </Tab>
+</Tabs>
+
+## Double Encoding
+
+<Warning>
+  **Avoid double-encoding!** Encoding an already-encoded string produces incorrect results:
+  
+  ```javascript
+  encodeURIComponent('hello')              // "hello"
+  encodeURIComponent('hello%20world')      // "hello%2520world" ❌
+  ```
+  
+  Always decode before re-encoding.
+</Warning>
+
+## Browser APIs
+
+### URLSearchParams
+
+Modern API for working with query strings:
+
+```javascript
+const params = new URLSearchParams();
+params.set('name', 'John Doe');
+params.set('email', 'john@example.com');
+params.toString();
+// → name=John+Doe&email=john%40example.com
+```
+
+### URL API
+
+Parse and construct URLs:
+
+```javascript
+const url = new URL('https://example.com');
+url.searchParams.set('q', 'hello world');
+url.toString();
+// → https://example.com/?q=hello+world
+```
+
+## Related Tools
+
+- [URL Parser](/tools/url-parser) - Break down URL components
+- [Base64 String](/tools/base64-string) - Base64 encoding
+- [HTML Entity](/tools/html-entity) - HTML entity encoding

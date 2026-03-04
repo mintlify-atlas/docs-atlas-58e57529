@@ -1,0 +1,99 @@
+---
+title: Lorem Ipsum Generator
+description: Generate placeholder text in words or paragraphs for mockups and prototypes
+---
+
+## Overview
+
+The Lorem Ipsum Generator creates classic "Lorem ipsum dolor sit amet" placeholder text for use in design mockups, prototypes, and documentation. Generate text by word count or paragraph count.
+
+## Use Cases
+
+- **Design Mockups**: Fill content areas in UI/UX designs with realistic text
+- **Prototyping**: Populate templates with sample text to visualize layouts
+- **Testing**: Generate test data for typography and text overflow scenarios
+- **Documentation**: Create placeholder content while waiting for final copy
+
+## Input Format
+
+Enter a number indicating how many units to generate:
+
+```
+3
+```
+
+For word-based generation:
+```
+50
+```
+
+## Output Modes
+
+### Paragraphs (default)
+Generates full paragraphs of Lorem Ipsum text:
+
+```
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+```
+
+### Words
+Generates a specific number of words:
+
+```
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat
+```
+
+## Examples
+
+<CodeGroup>
+```text Input: 3 paragraphs
+3
+```
+
+```text Output
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: 25 words
+25
+```
+
+```text Output
+Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua Ut enim ad minim veniam quis
+```
+</CodeGroup>
+
+## Configuration
+
+- **Count**: Enter a number between 1 and 1000
+- **Mode**: Select between paragraphs or words from the action menu
+
+## Implementation Details
+
+From `lib/tools/engine.ts:551-561`:
+
+```typescript
+case 'lorem-ipsum': {
+  const count = Math.max(1, Math.min(1000, Number(String(input).trim() || '3')));
+  const unit = action === 'words' ? 'words' : 'paragraphs';
+  const base = 'Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
+  if (unit === 'words') {
+    const words = base.split(' ');
+    return { output: Array.from({ length: count }, (_, i) => words[i % words.length]).join(' ') };
+  }
+  const para = `${base}. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.`;
+  return { output: Array.from({ length: count }, () => para).join('\n\n') };
+}
+```
+
+<Note>
+The generator cycles through a fixed set of Lorem Ipsum words, ensuring consistent and recognizable placeholder text.
+</Note>

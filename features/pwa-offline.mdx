@@ -1,0 +1,336 @@
+---
+title: PWA & Offline Support
+description: Install Kayston's Forge as a Progressive Web App with full offline functionality
+---
+
+Kayston's Forge is a **Progressive Web App (PWA)** that can be installed on your device and works completely offline. All 47 tools run locally in your browser with no internet connection required.
+
+## Installing as PWA
+
+### Desktop Installation
+
+#### Chrome / Edge / Brave
+
+1. Visit the Kayston's Forge website
+2. Look for the **install icon** in the address bar (⊕ or computer icon)
+3. Click the icon and select **Install**
+4. The app will open in its own window without browser UI
+
+Alternatively:
+
+1. Click the three-dot menu (⋮) in the browser
+2. Select **Install Kayston's Forge** or **Create Shortcut**
+3. Check **Open as window** for a native app experience
+
+#### Firefox
+
+1. Visit the Kayston's Forge website
+2. Click the three-line menu (≡) > **Install Kayston's Forge**
+3. Confirm installation in the dialog
+
+#### Safari (macOS)
+
+1. Visit the Kayston's Forge website
+2. Go to **File** > **Add to Dock** (macOS Sonoma+)
+3. The app will be added to your Dock as a standalone app
+
+### Mobile Installation
+
+#### iOS Safari
+
+1. Open Kayston's Forge in Safari
+2. Tap the **Share** button (square with arrow)
+3. Scroll down and tap **Add to Home Screen**
+4. Edit the name if desired and tap **Add**
+5. The app icon appears on your home screen
+
+#### Android Chrome
+
+1. Open Kayston's Forge in Chrome
+2. Tap the three-dot menu (⋮)
+3. Select **Add to Home screen** or **Install app**
+4. Follow the prompts to install
+5. The app icon appears on your home screen
+
+<Tip>
+Installed PWAs get their own app icon, run in a standalone window, and appear in your OS app switcher just like native apps.
+</Tip>
+
+## PWA Manifest
+
+The PWA configuration is defined in `public/manifest.json`:
+
+```json
+{
+  "name": "Kayston's Forge",
+  "short_name": "Kaystons",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf6e3",
+  "theme_color": "#b58900",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+```
+
+### Manifest Properties
+
+- **name**: Full app name shown during installation
+- **short_name**: Short name for home screen icons (limited space)
+- **start_url**: URL to load when the app is launched
+- **display**: `standalone` removes browser UI for a native app feel
+- **background_color**: Warm cream (#fdf6e3) from Solarized Light theme
+- **theme_color**: Brand gold (#b58900) for OS-level UI elements
+- **icons**: SVG icons at 192x192 and 512x512 for crisp display at any size
+
+## Service Worker
+
+The app uses a custom service worker (`public/sw.js`) for offline caching and performance.
+
+### Caching Strategy
+
+The service worker uses a **hybrid caching approach**:
+
+#### Network-First for HTML
+
+- Navigation requests (HTML pages) fetch from the network first
+- If the network is unavailable, fall back to the cache
+- Successful responses are cached for future offline use
+
+```javascript
+// Network-first for HTML navigation
+if (event.request.mode === 'navigate') {
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE).then((cache) => 
+          cache.put(event.request, copy)
+        );
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
+}
+```
+
+<Info>
+**Why network-first for HTML?** This ensures users always get the latest version of the app when online, while still functioning offline.
+</Info>
+
+#### Cache-First for Static Assets
+
+- JavaScript, CSS, images, and other static assets load from cache first
+- If not cached, fetch from the network and cache the response
+- This provides instant load times for repeat visits
+
+```javascript
+// Cache-first for static assets
+event.respondWith(
+  caches.match(event.request).then((cached) => {
+    if (cached) return cached;
+    return fetch(event.request).then((response) => {
+      const copy = response.clone();
+      caches.open(CACHE).then((cache) => 
+        cache.put(event.request, copy)
+      );
+      return response;
+    });
+  })
+);
+```
+
+### Cache Versioning
+
+The service worker uses a versioned cache name (`kaystons-forge-v2`):
+
+- When the cache version changes, old caches are automatically deleted
+- This prevents stale assets from persisting across updates
+
+```javascript
+const CACHE = 'kaystons-forge-v2';
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE)
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+});
+```
+
+### Registration
+
+The service worker is registered in `AppShell.tsx` on app load:
+
+```typescript
+useEffect(() => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch(() => {});
+  }
+}, []);
+```
+
+<Note>
+Service worker registration failures are silently ignored — the app works fine without offline support if the browser doesn't support service workers.
+</Note>
+
+## Offline Functionality
+
+### What Works Offline
+
+✅ **All 47 tools** — Every tool runs client-side with no network requests  
+✅ **Full UI** — Navigation, command palette, sidebar all work offline  
+✅ **History & settings** — IndexedDB works offline  
+✅ **Tool execution** — All encoding, formatting, and conversion happens locally  
+✅ **PWA installation** — Can be installed and launched offline  
+
+### What Requires Internet
+
+❌ **Initial load** — First visit requires downloading the app (typical for PWAs)  
+❌ **Updates** — New features and bug fixes need an internet connection  
+❌ **External links** — Documentation links to external sites won't work offline  
+
+<Warning>
+Some tools may have limited functionality offline if they rely on external resources:
+
+- **QR Code Reader** — Camera access works, but uploading from cloud storage requires internet
+- **URL Parser** — Works offline, but can't fetch external URLs for validation
+</Warning>
+
+## Benefits of PWA
+
+### Performance
+
+- **Instant load** — Static site cached after first visit
+- **No round trips** — All processing happens in your browser
+- **Fast execution** — No server latency or API calls
+
+### Privacy
+
+- **Zero data transmission** — All data stays on your device
+- **No tracking** — No analytics, no cookies (except for app state)
+- **Offline operation** — Works in air-gapped environments
+
+### User Experience
+
+- **Native feel** — Standalone window, no browser UI
+- **App launcher** — Appears in OS app switcher and spotlight search
+- **Keyboard shortcuts** — Full support for app-wide shortcuts
+- **Notifications** — Could support push notifications (not currently implemented)
+
+## Browser Support
+
+PWA features are supported in:
+
+| Browser | Desktop Install | Mobile Install | Service Worker | Offline |
+|---------|----------------|----------------|----------------|---------|
+| Chrome | ✅ | ✅ | ✅ | ✅ |
+| Edge | ✅ | ✅ | ✅ | ✅ |
+| Firefox | ✅ | ✅ | ✅ | ✅ |
+| Safari | ✅ (macOS 14+) | ✅ | ✅ | ✅ |
+| Brave | ✅ | ✅ | ✅ | ✅ |
+
+<Tip>
+Even if your browser doesn't support PWA installation, the app still works normally as a regular website with full offline capabilities via the service worker.
+</Tip>
+
+## Updating the App
+
+When a new version is deployed:
+
+1. **Service worker detects update** — New `sw.js` with different cache version
+2. **New assets download** — Next navigation fetches fresh HTML/JS/CSS
+3. **Old cache cleared** — Previous cache version is deleted on activation
+4. **User sees update** — Changes appear on next page load or reload
+
+<Note>
+**Force update**: To immediately get the latest version, do a hard refresh (`Cmd/Ctrl+Shift+R`) or clear browser cache.
+</Note>
+
+## Uninstalling the PWA
+
+### Desktop
+
+#### Chrome / Edge / Brave
+
+1. Open the installed app
+2. Click the three-dot menu in the title bar
+3. Select **Uninstall Kayston's Forge**
+
+Alternatively:
+
+1. Go to `chrome://apps` (Chrome) or `edge://apps` (Edge)
+2. Right-click the Kayston's Forge icon
+3. Select **Remove from Chrome/Edge**
+
+#### Firefox
+
+1. Visit `about:preferences#applications`
+2. Find **Kayston's Forge** in the list
+3. Click **Remove**
+
+#### Safari (macOS)
+
+1. Locate the app icon in your Dock
+2. Right-click and select **Options** > **Remove from Dock**
+
+### Mobile
+
+#### iOS
+
+1. Long-press the app icon on your home screen
+2. Tap **Remove App** > **Delete App**
+
+#### Android
+
+1. Long-press the app icon
+2. Drag to **Uninstall** or tap **App info** > **Uninstall**
+
+## Troubleshooting
+
+### App Won't Install
+
+- **Check HTTPS**: PWAs require HTTPS (production site) or localhost (development)
+- **Clear cache**: Old service workers can interfere — clear browser cache and try again
+- **Update browser**: Ensure you're using a recent browser version
+
+### Offline Mode Not Working
+
+1. Check service worker status in DevTools:
+   - Chrome: DevTools > Application > Service Workers
+   - Firefox: DevTools > Application > Service Workers
+2. Verify the service worker is **activated** and running
+3. Check cache storage has entries for the app
+
+### App Not Updating
+
+1. Do a hard refresh: `Cmd/Ctrl+Shift+R`
+2. Clear site data: DevTools > Application > Clear storage
+3. Unregister service worker manually in DevTools
+
+## Future Enhancements
+
+Planned PWA improvements:
+
+- **Background sync** — Sync history to cloud when connection is restored
+- **Push notifications** — Notify when new tools are added
+- **Share target** — Accept shared text from other apps
+- **Shortcuts** — Quick actions from app icon (e.g., "New JSON Formatter")
+- **File handlers** — Open JSON/YAML files directly in the app

@@ -1,0 +1,322 @@
+---
+title: JWT Debugger
+description: Decode and inspect JWT tokens with header analysis, payload claims extraction, and expiration validation
+---
+
+The JWT Debugger tool decodes JSON Web Tokens (JWTs) to inspect their header, payload claims, and expiration status. It provides a clear breakdown of token contents without requiring signature verification, making it ideal for debugging authentication flows.
+
+## Features
+
+- Decode JWT header and payload
+- Display all claims in formatted JSON
+- Automatic expiration validation
+- ISO 8601 expiration timestamp
+- Algorithm detection (HS256, RS256, etc.)
+- No signature verification (inspection only)
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Authentication Debugging" icon="bug">
+    Inspect JWT tokens to verify claims and troubleshoot authentication issues
+  </Card>
+  <Card title="Token Expiration" icon="clock">
+    Check when a token expires and whether it's still valid
+  </Card>
+  <Card title="Claims Analysis" icon="list">
+    Review user permissions, roles, and metadata stored in the token
+  </Card>
+  <Card title="Integration Testing" icon="flask">
+    Validate token structure during API integration development
+  </Card>
+</CardGroup>
+
+## JWT Structure
+
+A JWT consists of three Base64-encoded parts separated by dots:
+
+```
+header.payload.signature
+```
+
+### Header
+
+Contains token metadata:
+
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+### Payload
+
+Contains claims (user data, permissions, etc.):
+
+```json
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "iat": 1516239022,
+  "exp": 1516242622
+}
+```
+
+### Signature
+
+Used to verify token authenticity (not decoded by this tool).
+
+## Input Format
+
+Paste the complete JWT token:
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+<Note>
+  The tool requires at least the header and payload segments. The signature segment is optional.
+</Note>
+
+## Output Format
+
+The tool displays:
+
+1. **Header** - Algorithm and token type
+2. **Payload** - All claims in formatted JSON
+3. **Expiration** - ISO timestamp and validity status
+
+```javascript
+// Header
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+
+// Payload
+{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "iat": 1516239022,
+  "exp": 1516242622
+}
+
+// Expires At: 2024-03-15T10:30:22.000Z
+// Expired: false
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Basic Token">
+    Decode a simple JWT with standard claims.
+
+    **Input:**
+    ```
+    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.4Adcj0prp8-5hNbzH4K6cJZmRlvJG9xMhH5C2VKhAJg
+    ```
+
+    **Output:**
+    ```javascript
+    // Header
+    {
+      "alg": "HS256",
+      "typ": "JWT"
+    }
+
+    // Payload
+    {
+      "sub": "1234567890",
+      "name": "John Doe",
+      "iat": 1516239022,
+      "exp": 1516242622
+    }
+
+    // Expires At: 2018-01-18T01:30:22.000Z
+    // Expired: true
+    ```
+  </Tab>
+
+  <Tab title="Auth Token">
+    Inspect an authentication token with roles and permissions.
+
+    **Token Payload:**
+    ```json
+    {
+      "sub": "user@example.com",
+      "roles": ["admin", "editor"],
+      "permissions": ["read", "write", "delete"],
+      "iat": 1704067200,
+      "exp": 1704153600
+    }
+    ```
+
+    **Analysis:**
+    - User: `user@example.com`
+    - Roles: Admin and Editor access
+    - Issued: 2024-01-01 00:00:00 UTC
+    - Expires: 2024-01-02 00:00:00 UTC (24 hour validity)
+    - Status: Expired
+  </Tab>
+
+  <Tab title="OAuth Token">
+    Debug an OAuth 2.0 access token.
+
+    **Token Payload:**
+    ```json
+    {
+      "iss": "https://auth.example.com",
+      "sub": "google-oauth2|123456",
+      "aud": ["https://api.example.com"],
+      "scope": "openid profile email",
+      "azp": "client_id_123",
+      "exp": 1704070800,
+      "iat": 1704067200
+    }
+    ```
+
+    **Key Claims:**
+    - Issuer (`iss`): Auth provider URL
+    - Subject (`sub`): User identifier
+    - Audience (`aud`): Intended API recipient
+    - Scope: Requested permissions
+    - Authorized Party (`azp`): Client application ID
+  </Tab>
+</Tabs>
+
+## Standard Claims
+
+### Registered Claims (RFC 7519)
+
+| Claim | Name | Description |
+|-------|------|-------------|
+| `iss` | Issuer | Who created the token |
+| `sub` | Subject | User/principal identifier |
+| `aud` | Audience | Intended recipient(s) |
+| `exp` | Expiration | Unix timestamp when token expires |
+| `nbf` | Not Before | Token not valid before this time |
+| `iat` | Issued At | When token was created |
+| `jti` | JWT ID | Unique token identifier |
+
+### Custom Claims
+
+Applications often add custom claims:
+
+```json
+{
+  "email": "user@example.com",
+  "name": "Alice Smith",
+  "roles": ["admin"],
+  "tenant_id": "org_123",
+  "permissions": ["read:users", "write:users"]
+}
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:424-436`:
+
+```typescript
+case 'jwt-debugger': {
+  const token = input.trim();
+  const [headSegment, payloadSegment] = token.split('.');
+  if (!headSegment || !payloadSegment) 
+    return { output: 'Invalid JWT' };
+    
+  const decodeSegment = (segment: string) => 
+    JSON.parse(atob(segment.replaceAll('-', '+').replaceAll('_', '/')));
+    
+  const header = decodeSegment(headSegment);
+  const { jwtDecode } = await import('jwt-decode');
+  const payload = jwtDecode<Record<string, unknown>>(token);
+  
+  const exp = typeof payload.exp === 'number' 
+    ? new Date(payload.exp * 1000) 
+    : null;
+    
+  return {
+    output: `// Header\n${stringify(header, true)}\n\n// Payload\n${stringify(payload, true)}\n\n// Expires At: ${exp ? exp.toISOString() : 'N/A'}\n// Expired: ${exp ? exp.getTime() < Date.now() : 'N/A'}`,
+  };
+}
+```
+
+### Base64 Decoding
+
+JWT uses URL-safe Base64 encoding:
+
+- `+` → `-`
+- `/` → `_`
+- Padding `=` removed
+
+The tool automatically handles both standard and URL-safe variants.
+
+## Common Patterns
+
+### Extract from Authorization Header
+
+Remove the "Bearer" prefix:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                      ^^^ Paste this part only
+```
+
+### Check Token Expiration
+
+Compare `exp` claim to current time:
+
+```javascript
+const payload = JSON.parse(atob(token.split('.')[1]));
+const expiresAt = new Date(payload.exp * 1000);
+const isExpired = Date.now() > expiresAt.getTime();
+```
+
+### Validate Algorithm
+
+Check the `alg` header claim:
+
+```json
+{
+  "alg": "HS256"  // HMAC SHA-256 (symmetric)
+  "alg": "RS256"  // RSA SHA-256 (asymmetric)
+  "alg": "ES256"  // ECDSA SHA-256 (asymmetric)
+}
+```
+
+<Warning>
+  Never trust `"alg": "none"` tokens in production. This disables signature verification.
+</Warning>
+
+## Security Considerations
+
+<Warning>
+  **This tool DOES NOT verify signatures.** It only decodes the token for inspection. Always verify signatures server-side before trusting token contents.
+</Warning>
+
+### What This Tool Does
+
+- ✅ Decodes Base64 header and payload
+- ✅ Parses claims and displays them
+- ✅ Checks expiration timestamp
+
+### What This Tool Does NOT Do
+
+- ❌ Verify cryptographic signatures
+- ❌ Validate issuer or audience
+- ❌ Check token revocation
+- ❌ Enforce any security policies
+
+### Best Practices
+
+1. **Never store secrets in JWT payloads** - They are not encrypted, only encoded
+2. **Use short expiration times** - 15 minutes for access tokens, longer for refresh tokens
+3. **Verify signatures** - Always validate tokens server-side
+4. **Use HTTPS** - Tokens can be intercepted over unencrypted connections
+5. **Rotate secrets** - Change signing keys periodically
+
+## Related Tools
+
+- [Base64 String](/tools/base64-string) - Decode Base64-encoded data
+- [JSON Format/Validate](/tools/json-format-validate) - Format JWT payload JSON
+- [Hash Generator](/tools/hash-generator) - Generate HMAC signatures

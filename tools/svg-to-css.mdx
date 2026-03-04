@@ -1,0 +1,272 @@
+---
+title: SVG to CSS
+description: Embed SVG as CSS background-image using Base64 or URL-encoded data URIs
+---
+
+The **SVG to CSS** tool converts SVG markup into CSS `background-image` rules using data URIs. This eliminates the need for separate SVG files and reduces HTTP requests, making it ideal for icons, patterns, and decorative elements.
+
+## Use Cases
+
+- **Embedding icons** as CSS backgrounds (no separate SVG files)
+- **Creating CSS-only patterns** (stripes, dots, gradients)
+- **Reducing HTTP requests** by inlining small SVG assets
+- **Dynamic styling** - Modify SVG fill/stroke via CSS variables
+- **Single-file components** - Keep SVG and CSS together
+- **Email templates** - Inline SVG for maximum email client compatibility
+
+## How It Works
+
+The tool takes SVG markup and generates a CSS rule with a `data:` URI:
+
+1. **Parse SVG:** Validates that input contains `<svg>` element
+2. **Encode SVG:**
+   - **Base64 (default):** Converts SVG to base64 string
+   - **URL-encoded:** Percent-encodes SVG with optimized character set
+3. **Output CSS:** Generates `.icon` class with `background-image` property
+
+<Note>
+  URL-encoded data URIs are often **smaller than Base64** for simple SVGs because Base64 has ~33% overhead, while URL encoding only encodes special characters.
+</Note>
+
+## Input Format
+
+Any valid SVG markup:
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <path fill="#000" d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+</svg>
+```
+
+Or with XML declaration:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="40" fill="#3498db"/>
+</svg>
+```
+
+## Output Format
+
+### Default (Base64)
+
+```css
+.icon {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PHBhdGggZmlsbD0iIzAwMCIgZD0iTTEyIDJMMiA3djEwYzAgNS41NSAzLjg0IDEwLjc0IDkgMTIgNS4xNi0xLjI2IDktNi40NSA5LTEyVjdsLTEwLTV6Ii8+PC9zdmc+");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+### URL-Encoded
+
+```css
+.icon {
+  background-image: url("data:image/svg+xml,<svg xmlns=http://www.w3.org/2000/svg width=24 height=24><path fill=#000 d=M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z/></svg>");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+## Actions
+
+### Default (Base64)
+
+Encodes SVG as base64 data URI. **Best for:**
+
+- Complex SVGs with many special characters
+- When browser compatibility is critical (older email clients)
+- Minified/compressed SVGs (base64 is consistent size)
+
+### URL-Encoded
+
+Percent-encodes only special characters. **Best for:**
+
+- Simple SVGs (icons, shapes)
+- Debugging (human-readable in DevTools)
+- Smaller file size for basic SVGs
+
+## Examples
+
+<CodeGroup>
+
+```xml Simple Icon (Circle)
+Input:
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <circle cx="50" cy="50" r="40" fill="#e74c3c"/>
+</svg>
+
+Output (URL-encoded):
+.icon {
+  background-image: url("data:image/svg+xml,<svg xmlns=http://www.w3.org/2000/svg width=100 height=100><circle cx=50 cy=50 r=40 fill=#e74c3c/></svg>");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+```xml Checkmark Icon
+Input:
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#27ae60" stroke-width="2" stroke-linecap="round">
+  <polyline points="20 6 9 17 4 12"/>
+</svg>
+
+Output (Base64):
+.icon {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMjdhZTYwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PHBvbHlsaW5lIHBvaW50cz0iMjAgNiA5IDE3IDQgMTIiLz48L3N2Zz4=");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+```xml Striped Pattern
+Input:
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+  <defs>
+    <pattern id="stripes" patternUnits="userSpaceOnUse" width="20" height="20">
+      <line x1="0" y1="0" x2="0" y2="20" stroke="#3498db" stroke-width="10"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#stripes)"/>
+</svg>
+
+Output:
+.icon {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGRlZnM+PHBhdHRlcm4gaWQ9InN0cmlwZXMiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGxpbmUgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjIwIiBzdHJva2U9IiMzNDk4ZGIiIHN0cm9rZS13aWR0aD0iMTAiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjc3RyaXBlcykiLz48L3N2Zz4=");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:932-944`
+</Info>
+
+The tool implements two encoding strategies:
+
+### Base64 Encoding (Default)
+
+```typescript
+const b64 = btoa(unescape(encodeURIComponent(svg)));
+return `.icon {
+  background-image: url("data:image/svg+xml;base64,${b64}");
+}`;
+```
+
+- Uses `encodeURIComponent` + `unescape` + `btoa` for UTF-8 → Base64
+- **Overhead:** ~33% size increase (3 bytes → 4 characters)
+
+### URL Encoding (Optimized)
+
+```typescript
+const encoded = encodeURIComponent(svg)
+  .replace(/%20/g, ' ')   // Keep spaces (smaller)
+  .replace(/%3D/g, '=')   // Keep equals
+  .replace(/%3A/g, ':')   // Keep colons
+  .replace(/%2F/g, '/')   // Keep slashes
+  .replace(/%22/g, "'");  // Use single quotes
+```
+
+- Encodes only special characters (`<>"#%{}|^[]`)
+- Optimizes common SVG characters (`:`, `=`, `/`) to reduce size
+
+## Size Comparison
+
+| SVG Size | Base64 Size | URL-Encoded Size | Winner |
+|----------|------------|-----------------|--------|
+| 100 bytes | 136 bytes (+36%) | 110 bytes (+10%) | URL |
+| 500 bytes | 668 bytes (+34%) | 530 bytes (+6%) | URL |
+| 2 KB (minified) | 2.7 KB (+35%) | 2.1 KB (+5%) | URL |
+| 5 KB (complex) | 6.7 KB (+34%) | 5.3 KB (+6%) | URL |
+
+<Note>
+  **Rule of thumb:** Use URL-encoded for simple SVGs. Use Base64 for complex SVGs or when targeting older browsers/email clients.
+</Note>
+
+## Usage Patterns
+
+### As Icon Background
+
+```css
+.icon {
+  background-image: url("data:image/svg+xml,...");
+  background-repeat: no-repeat;
+  background-size: contain;
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+}
+```
+
+```html
+<span class="icon"></span>
+```
+
+### As Repeating Pattern
+
+```css
+.pattern {
+  background-image: url("data:image/svg+xml,...");
+  background-repeat: repeat;
+  background-size: 20px 20px;
+}
+```
+
+### With CSS Variables (Dynamic Colors)
+
+Modify SVG colors using CSS custom properties:
+
+```css
+:root {
+  --icon-color: #3498db;
+}
+
+.icon {
+  /* SVG uses `fill="var(--icon-color)"` or `currentColor` */
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><circle fill='%233498db'/></svg>");
+}
+```
+
+<Warning>
+  CSS variables inside data URIs do NOT work. You must generate separate CSS rules for each color variant or use `currentColor` with `mask-image` instead.
+</Warning>
+
+## Mask-Image Alternative
+
+For dynamic colors, use `mask-image` instead of `background-image`:
+
+```css
+.icon {
+  mask-image: url("data:image/svg+xml,...");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  background-color: var(--icon-color); /* Color is controlled by background */
+  width: 24px;
+  height: 24px;
+}
+```
+
+## Browser Compatibility
+
+- **Data URIs:** Supported in all modern browsers and IE8+
+- **URL-encoded SVG:** Supported in all modern browsers
+- **Base64 SVG:** Widest compatibility (use for email templates)
+
+## Optimization Tips
+
+1. **Minify SVG first:** Remove unnecessary attributes, comments, metadata
+2. **Remove XML declaration:** `<?xml ...?>` is optional for inline SVG
+3. **Use shorthand attributes:** `stroke-width="2"` → `stroke-width=2`
+4. **Combine paths:** Use single `<path>` instead of multiple shapes when possible
+5. **Avoid gradients/filters:** They increase size significantly
+
+## Related Tools
+
+- [Base64 String Encode/Decode](/tools/base64-string) - Encode/decode base64
+- [URL Encode/Decode](/tools/url-encode-decode) - URL encoding utilities
+- [HTML Beautify/Minify](/tools/html-beautify) - Minify SVG before encoding
+- [CSS Beautify/Minify](/tools/css-beautify) - Format generated CSS

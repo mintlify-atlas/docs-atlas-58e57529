@@ -1,0 +1,488 @@
+---
+title: Testing
+description: Comprehensive testing strategy using Vitest for Kayston's Forge
+---
+
+Kayston's Forge uses Vitest with jsdom to ensure all tools work correctly and handle edge cases gracefully. The test suite includes 157 tests across three categories.
+
+## Test Structure
+
+Tests are organized in the `tests/unit/` directory:
+
+```
+tests/
+└── unit/
+    ├── engine.test.ts      # 57 tool engine tests
+    ├── bugfixes.test.ts    # 28 regression tests
+    └── fuzz.test.ts        # 72 robustness tests
+```
+
+## Running Tests
+
+<CodeGroup>
+```bash All Tests
+# Run entire test suite (157 tests)
+npm run test
+```
+
+```bash Single File
+# Run specific test file
+npx vitest run tests/unit/engine.test.ts
+```
+
+```bash Pattern Matching
+# Run tests matching a pattern
+npx vitest -t "json format"
+```
+
+```bash Watch Mode
+# Run in watch mode (re-runs on file changes)
+npx vitest
+```
+
+```bash Coverage
+# Run with coverage report
+npx vitest --coverage
+```
+</CodeGroup>
+
+## Test Configuration
+
+Vitest is configured in `vitest.config.ts`:
+
+```typescript
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+    },
+  },
+  test: {
+    environment: 'jsdom',    // Browser-like environment
+    globals: true,           // Global test APIs (describe, it, expect)
+    include: ['tests/**/*.test.ts'],
+  },
+});
+```
+
+### Key Configuration
+
+- **jsdom environment**: Simulates a browser for client-side code
+- **Path alias `@/`**: Matches Next.js import paths
+- **Globals enabled**: No need to import `describe`, `it`, `expect`
+
+## Writing Tests
+
+### Basic Tool Test
+
+Test a simple tool transformation:
+
+```typescript
+import { describe, expect, it } from 'vitest';
+import { processTool } from '@/lib/tools/engine';
+
+describe('my new tool', () => {
+  it('transforms input correctly', async () => {
+    const result = await processTool('my-new-tool', 'test input', {
+      action: 'default',
+    });
+    
+    expect(result.output).toBe('expected output');
+  });
+});
+```
+
+### Testing Actions
+
+Test different actions for a tool:
+
+```typescript
+describe('json formatter', () => {
+  it('formats json', async () => {
+    const out = await processTool('json-format-validate', '{"a":1}', {
+      action: 'default',
+    });
+    expect(out.output).toContain('\n');
+    expect(out.output).toContain('"a"');
+  });
+
+  it('minifies json', async () => {
+    const out = await processTool('json-format-validate', '{"a":1, "b":2}', {
+      action: 'minify',
+    });
+    expect(out.output).toBe('{"a":1,"b":2}');
+  });
+});
+```
+
+### Testing Error Handling
+
+Ensure tools handle invalid input gracefully:
+
+```typescript
+it('handles invalid json', async () => {
+  const out = await processTool('json-format-validate', '{invalid}');
+  expect(out.output).toContain('error');
+});
+
+it('handles empty input', async () => {
+  const out = await processTool('my-tool', '');
+  expect(out.output).toBeDefined();
+});
+```
+
+### Testing with Secondary Input
+
+For tools that accept two inputs (like diff):
+
+```typescript
+it('compares two texts', async () => {
+  const out = await processTool('text-diff', 'line 1\nline 2', {
+    action: 'default',
+    secondInput: 'line 1\nline 3',
+  });
+  expect(out.output).toContain('-');
+  expect(out.output).toContain('+');
+});
+```
+
+## Test Categories
+
+### 1. Engine Tests (engine.test.ts)
+
+Covers core functionality for all 47 tools:
+
+```typescript
+describe('tool engine', () => {
+  it('formats json', async () => { /* ... */ });
+  it('encodes base64', async () => { /* ... */ });
+  it('parses urls', async () => { /* ... */ });
+  it('generates hashes', async () => { /* ... */ });
+  // ... 53 more tests
+});
+```
+
+**Focus**: Happy path testing for each tool
+
+### 2. Regression Tests (bugfixes.test.ts)
+
+Prevents previously fixed bugs from returning:
+
+```typescript
+describe('regression tests', () => {
+  it('handles trailing commas in json', async () => {
+    const out = await processTool('json-format-validate', '{"a":1,}');
+    expect(out.output).not.toContain('error');
+  });
+
+  it('preserves unicode in base64', async () => {
+    const encoded = await processTool('base64-string', '你好');
+    const decoded = await processTool('base64-string', encoded.output, {
+      action: 'decode',
+    });
+    expect(decoded.output).toBe('你好');
+  });
+});
+```
+
+**Focus**: Edge cases and previously reported bugs
+
+### 3. Fuzz Tests (fuzz.test.ts)
+
+Tests parser robustness with adversarial inputs:
+
+```typescript
+describe('fuzz tests', () => {
+  it('handles deeply nested json', async () => {
+    const deep = '{'.repeat(100) + '"a":1' + '}'.repeat(100);
+    const out = await processTool('json-format-validate', deep);
+    expect(out.output).toBeDefined();
+  });
+
+  it('handles malformed xml', async () => {
+    const out = await processTool('xml-beautify', '<tag>unclosed');
+    expect(out.output).toContain('error');
+  });
+
+  it('rejects oversized input', async () => {
+    const huge = 'x'.repeat(10 * 1024 * 1024); // 10 MB
+    const out = await processTool('json-format-validate', huge);
+    expect(out.output).toContain('too large');
+  });
+});
+```
+
+**Focus**: Security, performance, and edge case handling
+
+## Testing Best Practices
+
+<Steps>
+  <Step title="Test all actions">
+    If your tool has multiple actions, test each one:
+
+    ```typescript
+    describe('string case converter', () => {
+      it('converts to camelCase', async () => { /* ... */ });
+      it('converts to snake_case', async () => { /* ... */ });
+      it('converts to kebab-case', async () => { /* ... */ });
+      it('converts to PascalCase', async () => { /* ... */ });
+    });
+    ```
+  </Step>
+
+  <Step title="Test error paths">
+    Don't just test successful transformations:
+
+    ```typescript
+    it('rejects invalid input', async () => {
+      const out = await processTool('my-tool', 'invalid');
+      expect(out.output).toContain('error');
+    });
+    ```
+  </Step>
+
+  <Step title="Use descriptive test names">
+    Test names should clearly describe what they verify:
+
+    ```typescript
+    // Good
+    it('preserves unicode characters in base64 encoding', async () => { /* ... */ });
+
+    // Bad
+    it('test 1', async () => { /* ... */ });
+    ```
+  </Step>
+
+  <Step title="Test idempotency">
+    For reversible operations, test round-trips:
+
+    ```typescript
+    it('encodes and decodes without data loss', async () => {
+      const original = 'test data';
+      const encoded = await processTool('base64-string', original);
+      const decoded = await processTool('base64-string', encoded.output, {
+        action: 'decode',
+      });
+      expect(decoded.output).toBe(original);
+    });
+    ```
+  </Step>
+
+  <Step title="Test metadata and previews">
+    If your tool returns metadata or previews, test those too:
+
+    ```typescript
+    it('returns preview html', async () => {
+      const out = await processTool('markdown-preview', '# Heading');
+      expect(out.previewHtml).toContain('<h1>');
+    });
+
+    it('includes metadata', async () => {
+      const out = await processTool('hash-generator', 'data', {
+        action: 'sha256',
+      });
+      expect(out.meta).toContain('SHA256');
+    });
+    ```
+  </Step>
+</Steps>
+
+## Common Testing Patterns
+
+<CodeGroup>
+```typescript Snapshot Testing
+// For complex output, use snapshots
+it('formats sql correctly', async () => {
+  const out = await processTool('sql-formatter', 
+    'SELECT * FROM users WHERE id=1');
+  expect(out.output).toMatchSnapshot();
+});
+```
+
+```typescript Table Output
+// Testing tabular data
+it('parses url query params', async () => {
+  const out = await processTool('url-parser', 
+    'https://example.com?a=1&b=2');
+  expect(out.table).toHaveLength(2);
+  expect(out.table![0]).toEqual({ key: 'a', value: '1' });
+});
+```
+
+```typescript Async Operations
+// Tools with async dependencies
+it('decodes jwt token', async () => {
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+  const out = await processTool('jwt-debugger', token);
+  expect(out.output).toContain('Header');
+  expect(out.output).toContain('Payload');
+});
+```
+
+```typescript Multiple Assertions
+// Group related assertions
+it('converts yaml to json', async () => {
+  const yaml = 'key: value\nlist:\n  - item1\n  - item2';
+  const out = await processTool('yaml-to-json', yaml);
+  
+  expect(out.output).toBeDefined();
+  expect(out.output).toContain('"key"');
+  expect(out.output).toContain('"list"');
+  expect(() => JSON.parse(out.output)).not.toThrow();
+});
+```
+</CodeGroup>
+
+## Continuous Integration
+
+Tests run automatically on every push and pull request via GitHub Actions:
+
+```yaml
+# .github/workflows/test.yml
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm install
+      - run: npm run test
+```
+
+## Debugging Failed Tests
+
+<Steps>
+  <Step title="Run in watch mode">
+    ```bash
+    npx vitest
+    ```
+    
+    Vitest will re-run tests as you save files.
+  </Step>
+
+  <Step title="Add console.log">
+    ```typescript
+    it('debugging test', async () => {
+      const out = await processTool('my-tool', 'input');
+      console.log('Output:', out.output);
+      console.log('Meta:', out.meta);
+      expect(out.output).toBe('expected');
+    });
+    ```
+  </Step>
+
+  <Step title="Run single test">
+    Use `.only` to run just one test:
+
+    ```typescript
+    it.only('this test only', async () => {
+      // Only this test will run
+    });
+    ```
+  </Step>
+
+  <Step title="Check test isolation">
+    Ensure tests don't depend on each other:
+
+    ```bash
+    # Run tests in random order
+    npx vitest --sequence.shuffle
+    ```
+  </Step>
+</Steps>
+
+## Performance Testing
+
+Test that tools handle large inputs efficiently:
+
+```typescript
+it('handles large json input', async () => {
+  const large = JSON.stringify({
+    items: Array.from({ length: 10000 }, (_, i) => ({
+      id: i,
+      name: `Item ${i}`,
+    })),
+  });
+  
+  const start = performance.now();
+  const out = await processTool('json-format-validate', large);
+  const duration = performance.now() - start;
+  
+  expect(out.output).toBeDefined();
+  expect(duration).toBeLessThan(1000); // Should process in < 1s
+});
+```
+
+<Warning>
+  The engine rejects inputs larger than 5 MB to prevent UI freezing. Test this boundary:
+  
+  ```typescript
+  it('rejects oversized input', async () => {
+    const huge = 'x'.repeat(6 * 1024 * 1024); // 6 MB
+    const out = await processTool('my-tool', huge);
+    expect(out.output).toContain('too large');
+  });
+  ```
+</Warning>
+
+## Test Coverage Goals
+
+- **Tool coverage**: All tools must have at least one test
+- **Action coverage**: All actions must be tested
+- **Error coverage**: All error paths must be tested
+- **Edge cases**: Empty input, invalid input, boundary conditions
+
+## Troubleshooting
+
+### Tests Timeout
+
+```typescript
+// Increase timeout for slow tests
+it('slow operation', async () => {
+  // Test code
+}, 10000); // 10 second timeout
+```
+
+### Import Errors
+
+Ensure path alias is correct:
+
+```typescript
+// Correct
+import { processTool } from '@/lib/tools/engine';
+
+// Incorrect
+import { processTool } from '../../../lib/tools/engine';
+```
+
+### jsdom Errors
+
+Some browser APIs aren't available in jsdom. Mock them:
+
+```typescript
+import { vi } from 'vitest';
+
+global.crypto = {
+  getRandomValues: vi.fn((arr) => {
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = Math.floor(Math.random() * 256);
+    }
+    return arr;
+  }),
+} as any;
+```
+
+## Next Steps
+
+- Review [deployment process](/development/deployment)
+- Learn about [adding new tools](/development/adding-tools)
+- Study existing tests in `tests/unit/` for examples

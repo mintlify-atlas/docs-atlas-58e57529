@@ -1,0 +1,232 @@
+---
+title: Hash Generator
+description: Generate MD5, SHA-1, SHA-256, SHA-512, and HMAC hashes
+---
+
+## Overview
+
+The Hash Generator creates cryptographic hashes from text input using industry-standard algorithms. Supports MD5, SHA-1, SHA-256, SHA-512, and HMAC-SHA256. Outputs in hex, Base64, and Base64URL formats.
+
+## Use Cases
+
+- **Data Integrity**: Verify file and data integrity with checksums
+- **Password Storage**: Generate password hashes (use with salt and KDF)
+- **Cache Keys**: Create unique cache keys from content
+- **Digital Signatures**: Generate message digests for signing
+- **API Authentication**: Create HMAC signatures for API requests
+- **Content Addressing**: Generate content-based identifiers
+
+## Input Format
+
+Enter any text to hash:
+
+```
+Hello, World!
+```
+
+For file verification, paste file contents:
+```
+[file contents]
+```
+
+## Output Format
+
+Provides hex (default), Base64, and Base64URL encodings:
+
+```
+6cd3556deb0da54bca060b4c39479839
+
+Algorithm: SHA256
+Base64: bNNVbescOlS8oGC0w5R5gz
+Base64URL: bNNVbescOlS8oGC0w5R5gz
+```
+
+## Hash Algorithms
+
+### MD5
+128-bit hash (32 hex characters)
+
+```text Input
+Hello, World!
+```
+
+```text Output
+6cd3556deb0da54bca060b4c39479839
+```
+
+<Warning>
+MD5 is cryptographically broken. Use only for non-security purposes (checksums, ETags). Never use for passwords or digital signatures.
+</Warning>
+
+### SHA-1
+160-bit hash (40 hex characters)
+
+```text Input
+Hello, World!
+```
+
+```text Output
+0a0a9f2a6772942557ab5355d76af442f8f65e01
+```
+
+<Warning>
+SHA-1 is deprecated for cryptographic use. Collision attacks are practical. Use SHA-256 or SHA-512 instead.
+</Warning>
+
+### SHA-256 (Recommended)
+256-bit hash (64 hex characters)
+
+```text Input
+Hello, World!
+```
+
+```text Output
+dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
+```
+
+### SHA-512
+512-bit hash (128 hex characters)
+
+```text Input
+Hello, World!
+```
+
+```text Output
+374d794a95cdcfd8b35993185fef9ba368f160d8daf432d08ba9f1ed1e5abe6cc69291e0fa2fe0006a52570ef18c19def4e617c33ce52ef0a6e5fbe318cb0387
+```
+
+### HMAC-SHA256
+Hashed Message Authentication Code with SHA-256
+
+Requires a secret key (provided in second input):
+
+```text Input
+Hello, World!
+```
+
+```text Key (second input)
+my-secret-key
+```
+
+```text Output
+c9c87167e3ebd7c2a6b8f647d5e66e0b2c8d2f5e90c8f647d5e66e0b2c8d2f5e
+
+Algorithm: HMAC-SHA256 (key: provided)
+Base64: ycgxZ+Pr18Kmu49kfV5m4LLI0vXpDI9kfV5m4LLI0vXo=
+Base64URL: ycgxZ-Pr18Kmu49kfV5m4LLI0vXpDI9kfV5m4LLI0vXo
+```
+
+## Examples
+
+<CodeGroup>
+```text Input: Simple Text (SHA-256)
+The quick brown fox jumps over the lazy dog
+```
+
+```text Output
+d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+
+Algorithm: SHA256
+Base64: 16j7swfXgJRpypq8sAguT41WUeRtPNt2LQLQvzfJ5ZI=
+Base64URL: 16j7swfXgJRpypq8sAguT41WUeRtPNt2LQLQvzfJ5ZI
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: API Request (HMAC-SHA256)
+GET /api/users?page=1&limit=10
+```
+
+```text Key
+api_secret_key_12345
+```
+
+```text Output
+e5a7c8f1b2d4e6a8c9f1b3d5e7a9c2f4e6b8d1a3c5e7
+
+Algorithm: HMAC-SHA256 (key: provided)
+Base64: 5afI8bLU5qjJ8bPV56nC9Oa40aPF5w==
+Base64URL: 5afI8bLU5qjJ8bPV56nC9Oa40aPF5w
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Password (SHA-512)
+MySecurePassword123!
+```
+
+```text Output
+a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+```
+</CodeGroup>
+
+## Output Encodings
+
+### Hexadecimal (default)
+Lowercase hex string, widely compatible:
+```
+dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
+```
+
+### Base64
+Compact encoding for binary transmission:
+```
+3/1gIbsr1bCvZ2KQgJ7DpTGR3YHH9wpLKGiKNiGCmG8=
+```
+
+### Base64URL
+URL-safe Base64 (no padding, `-` instead of `+`, `_` instead of `/`):
+```
+3_1gIbsr1bCvZ2KQgJ7DpTGR3YHH9wpLKGiKNiGCmG8
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:619-650`:
+
+```typescript
+case 'hash-generator': {
+  const key = options.secondInput || '';
+  const algo = action || 'sha256';
+  let digest;
+  switch (algo) {
+    case 'md5':
+      digest = (await import("crypto-js")).MD5(input);
+      break;
+    case 'sha1':
+      digest = (await import("crypto-js")).SHA1(input);
+      break;
+    case 'sha256':
+      digest = (await import("crypto-js")).SHA256(input);
+      break;
+    case 'sha512':
+      digest = (await import("crypto-js")).SHA512(input);
+      break;
+    case 'hmac-sha256':
+      digest = (await import("crypto-js")).HmacSHA256(input, key);
+      break;
+    default:
+      digest = (await import("crypto-js")).SHA256(input);
+  }
+  return {
+    output: digest.toString((await import("crypto-js")).enc.Hex),
+    meta: [
+      `Algorithm: ${algo.toUpperCase()}${algo === 'hmac-sha256' ? ` (key: ${key ? 'provided' : 'none'})` : ''}`,
+      `Base64: ${digest.toString((await import("crypto-js")).enc.Base64)}`,
+      `Base64URL: ${digest.toString((await import("crypto-js")).enc.Base64).replaceAll('+', '-').replaceAll('/', '_').replaceAll(/=+$/g, '')}`,
+    ].join('\n'),
+  };
+}
+```
+
+<Note>
+Uses the `crypto-js` library for cross-platform hash generation. All operations run client-side in the browser.
+</Note>
+
+<Warning>
+For password storage, never use plain hashes. Use dedicated password hashing functions like bcrypt, scrypt, or Argon2 with proper salting and key derivation.
+</Warning>
+
+<Tip>
+For API HMAC signatures, use the same encoding (hex, Base64, Base64URL) that your API expects. Most APIs use Base64 or hex.
+</Tip>

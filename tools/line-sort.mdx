@@ -1,0 +1,423 @@
+---
+title: Line Sort/Dedupe
+description: Sort and deduplicate lines of text with multiple sorting options
+---
+
+## Overview
+
+The Line Sort/Dedupe tool sorts and deduplicates text lines. Supports ascending/descending sort, case-insensitive deduplication with first-seen casing preservation, and combined sort+dedupe operations.
+
+## Use Cases
+
+- **Text Cleanup**: Remove duplicate lines from lists
+- **Data Preparation**: Sort lines alphabetically for diff/merge
+- **Log Analysis**: Deduplicate and sort log entries
+- **List Management**: Clean up email lists, usernames, IDs
+- **Configuration Files**: Sort and dedupe config entries
+- **SQL Output**: Clean up query results
+
+## Input Format
+
+Plain text with one item per line:
+
+```
+banana
+apple
+cherry
+apple
+date
+```
+
+```
+user123
+user456
+USER123
+user789
+user456
+```
+
+```
+ERROR: Connection failed
+WARNING: Low memory
+ERROR: Connection failed
+INFO: Process started
+WARNING: Low memory
+```
+
+## Actions
+
+### Sort Ascending (default)
+Sort lines alphabetically A→Z:
+```
+apple
+apple
+banana
+cherry
+date
+```
+
+### Sort Descending
+Sort lines alphabetically Z→A:
+```
+date
+cherry
+banana
+apple
+apple
+```
+
+### Dedupe
+Remove duplicates, preserve first-seen casing, maintain original order:
+```
+banana
+apple
+cherry
+date
+```
+
+### Dedupe + Sort
+Remove duplicates, then sort alphabetically:
+```
+apple
+banana
+cherry
+date
+```
+
+## Output Format
+
+Processed text with one item per line:
+
+```
+apple
+banana
+cherry
+date
+```
+
+Metadata:
+```
+4 lines | 1 duplicate(s)
+```
+
+## Deduplication Rules
+
+### Case Insensitive
+Comparison ignores case:
+```
+apple
+Apple
+APPLE
+```
+→ Treated as same value
+
+### First-Seen Casing
+Preserves casing of first occurrence:
+```
+Apple
+apple
+APPLE
+```
+→ Output: `Apple` (first-seen)
+
+### Whitespace Handling
+Lines are trimmed before comparison:
+```
+  apple  
+apple
+ apple
+```
+→ Treated as same value
+→ Output: `apple` (first trimmed version)
+
+### Empty Lines
+Empty lines (after trimming) are ignored:
+```
+apple
+
+banana
+  
+cherry
+```
+→ Empty lines removed
+
+## Examples
+
+<CodeGroup>
+```text Input: Sort Ascending
+zebra
+apple
+mango
+banana
+```
+
+```text Output (Sort Ascending)
+apple
+banana
+mango
+zebra
+
+Meta: 4 lines | 0 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Sort Descending
+apple
+banana
+cherry
+date
+```
+
+```text Output (Sort Descending)
+date
+cherry
+banana
+apple
+
+Meta: 4 lines | 0 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Dedupe (Preserve Order)
+banana
+apple
+cherry
+apple
+date
+banana
+```
+
+```text Output (Dedupe)
+banana
+apple
+cherry
+date
+
+Meta: 4 lines | 2 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Dedupe + Sort
+banana
+apple
+cherry
+apple
+date
+banana
+```
+
+```text Output (Dedupe + Sort)
+apple
+banana
+cherry
+date
+
+Meta: 4 lines | 2 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Case-Insensitive Dedupe
+Apple
+banana
+APPLE
+Cherry
+Banana
+apple
+```
+
+```text Output (Dedupe)
+Apple
+banana
+Cherry
+
+Meta: 3 lines | 3 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: With Empty Lines
+apple
+
+banana
+  
+cherry
+
+apple
+```
+
+```text Output (Dedupe + Sort)
+apple
+banana
+cherry
+
+Meta: 3 lines | 1 duplicate(s)
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Log Lines
+ERROR: Connection timeout
+WARNING: Low disk space
+ERROR: Connection timeout
+INFO: Service started
+WARNING: Low disk space
+ERROR: Connection timeout
+```
+
+```text Output (Dedupe + Sort)
+ERROR: Connection timeout
+INFO: Service started
+WARNING: Low disk space
+
+Meta: 3 lines | 3 duplicate(s)
+```
+</CodeGroup>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:968-1004`:
+
+```typescript
+case 'line-sort': {
+  if (!input) return { output: '', meta: '0 lines | 0 duplicate(s)' };
+  const lines = input.split('\n');
+
+  // Build a first-seen Map iteratively
+  const buildFirstSeenMap = (src: string[]): Map<string, string> => {
+    const seen = new Map<string, string>();
+    for (const l of src) {
+      const key = l.trim().toLowerCase();
+      if (key && !seen.has(key)) seen.set(key, l.trim());
+    }
+    return seen;
+  };
+
+  // Apply dedupe option before sorting when explicitly requested
+  const workingLines = options.dedupe === true
+    ? [...buildFirstSeenMap(lines).values()]
+    : lines;
+
+  let result: string[];
+  switch (action) {
+    case 'sort-asc':
+    case 'default':
+      result = [...workingLines].sort((a, b) => a.localeCompare(b));
+      break;
+    case 'sort-desc': 
+      result = [...workingLines].sort((a, b) => b.localeCompare(a)); 
+      break;
+    case 'dedupe': 
+      result = [...buildFirstSeenMap(lines).values()]; 
+      break;
+    case 'dedupe-sort': 
+      result = [...buildFirstSeenMap(lines).values()].sort((a, b) => a.localeCompare(b)); 
+      break;
+    default: 
+      result = [...workingLines].sort((a, b) => a.localeCompare(b));
+  }
+
+  const nonEmpty = lines.filter((l) => l.trim()).length;
+  const uniqueCount = new Set(lines.map((l) => l.trim().toLowerCase()).filter(Boolean)).size;
+  const dupes = nonEmpty - uniqueCount;
+  return { output: result.join('\n'), meta: `${result.length} lines | ${dupes} duplicate(s)` };
+}
+```
+
+**First-Seen Casing**:
+```typescript
+const buildFirstSeenMap = (src: string[]): Map<string, string> => {
+  const seen = new Map<string, string>();
+  for (const l of src) {
+    const key = l.trim().toLowerCase();
+    if (key && !seen.has(key)) seen.set(key, l.trim());
+  }
+  return seen;
+};
+```
+- Normalize key: trim + lowercase
+- Only store first occurrence
+- Preserve original casing in value
+
+**Sorting**:
+```typescript
+lines.sort((a, b) => a.localeCompare(b))  // Ascending
+lines.sort((a, b) => b.localeCompare(a))  // Descending
+```
+- Uses `localeCompare` for proper Unicode sorting
+- Supports accented characters and non-English alphabets
+
+## Edge Cases
+
+### Single Line
+```
+apple
+```
+→ Output: `apple`
+→ Meta: `1 lines | 0 duplicate(s)`
+
+### All Duplicates
+```
+apple
+apple
+apple
+```
+→ Output: `apple`
+→ Meta: `1 lines | 2 duplicate(s)`
+
+### Empty Input
+```
+(empty)
+```
+→ Output: (empty)
+→ Meta: `0 lines | 0 duplicate(s)`
+
+### Only Whitespace
+```
+  
+    
+  
+```
+→ Output: (empty)
+→ Meta: `0 lines | 0 duplicate(s)`
+
+## Performance
+
+- **Lines**: Handles up to 100K lines efficiently
+- **Algorithm**: O(n log n) for sorting, O(n) for deduplication
+- **Memory**: Stores all lines in memory (approx 1MB per 10K lines)
+
+## Comparison with Unix Tools
+
+### sort + uniq
+```bash
+sort file.txt | uniq
+```
+= Line Sort/Dedupe with "Dedupe + Sort" action
+
+### sort -u
+```bash
+sort -u file.txt
+```
+= Line Sort/Dedupe with "Dedupe + Sort" action
+
+### sort -r
+```bash
+sort -r file.txt
+```
+= Line Sort/Dedupe with "Sort Descending" action
+
+<Note>
+The Line Sort/Dedupe tool uses first-seen casing preservation for deduplication, which differs from Unix `uniq` (which requires sorted input and preserves last-seen casing).
+</Note>
+
+<Tip>
+For maximum duplicate removal, use the "Dedupe + Sort" action. For preserving original line order, use the "Dedupe" action.
+</Tip>
+
+<Warning>
+Very large inputs (over 1 million lines) may cause performance issues or browser memory limits. For massive datasets, use command-line tools like `sort` and `uniq` instead.
+</Warning>

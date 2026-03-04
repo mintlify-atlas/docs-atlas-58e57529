@@ -1,0 +1,414 @@
+---
+title: Cron Job Parser
+description: Parse and explain cron expressions with human-readable descriptions and next run time calculations
+---
+
+The Cron Job Parser tool converts cron schedule expressions into plain English descriptions and calculates the next scheduled run times. It helps developers understand and validate cron schedules used in task automation, job scheduling, and periodic task execution.
+
+## Features
+
+- Human-readable cron expression descriptions
+- Next 5 scheduled run times
+- Standard 5-field cron syntax support
+- Detailed error messages for invalid expressions
+- Handles complex patterns (steps, ranges, lists)
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Schedule Validation" icon="check">
+    Verify cron schedules before deploying automated tasks
+  </Card>
+  <Card title="Documentation" icon="book">
+    Generate human-readable descriptions of cron schedules for documentation
+  </Card>
+  <Card title="Debugging" icon="bug">
+    Understand existing cron jobs and troubleshoot scheduling issues
+  </Card>
+  <Card title="Planning" icon="calendar">
+    Calculate when scheduled tasks will run to plan deployments and maintenance
+  </Card>
+</CardGroup>
+
+## Cron Syntax
+
+Cron expressions use 5 fields separated by spaces:
+
+```
+minute  hour  day  month  day-of-week
+```
+
+### Field Ranges
+
+| Field | Range | Values |
+|-------|-------|--------|
+| Minute | 0-59 | 0 = top of hour |
+| Hour | 0-23 | 0 = midnight, 12 = noon |
+| Day | 1-31 | Day of month |
+| Month | 1-12 | 1 = January, 12 = December |
+| Day of Week | 0-7 | 0 or 7 = Sunday, 1 = Monday |
+
+### Special Characters
+
+| Character | Meaning | Example |
+|-----------|---------|----------|
+| `*` | Any value | `* * * * *` = every minute |
+| `,` | List separator | `1,15,30` = 1st, 15th, and 30th |
+| `-` | Range | `1-5` = 1 through 5 |
+| `/` | Step | `*/5` = every 5 units |
+
+## Input Format
+
+Enter a 5-field cron expression:
+
+```
+0 9 * * 1-5
+```
+
+<Note>
+  This tool uses standard 5-field cron syntax. Extended formats with seconds or year fields are not supported.
+</Note>
+
+## Actions
+
+### Default (Describe)
+
+Generate human-readable description:
+
+```
+At 9:00 AM, Monday through Friday
+```
+
+### Next Runs
+
+Calculate the next 5 scheduled executions:
+
+```
+3/5/2026, 9:00:00 AM
+3/6/2026, 9:00:00 AM
+3/9/2026, 9:00:00 AM
+3/10/2026, 9:00:00 AM
+3/11/2026, 9:00:00 AM
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Weekday Morning">
+    Run at 9 AM on weekdays.
+
+    **Expression:**
+    ```
+    0 9 * * 1-5
+    ```
+
+    **Description:**
+    ```
+    At 9:00 AM, Monday through Friday
+    ```
+
+    **Next Runs:**
+    ```
+    3/5/2026, 9:00:00 AM
+    3/6/2026, 9:00:00 AM
+    3/9/2026, 9:00:00 AM
+    3/10/2026, 9:00:00 AM
+    3/11/2026, 9:00:00 AM
+    ```
+  </Tab>
+
+  <Tab title="Every 5 Minutes">
+    Run every 5 minutes.
+
+    **Expression:**
+    ```
+    */5 * * * *
+    ```
+
+    **Description:**
+    ```
+    Every 5 minutes
+    ```
+
+    **Next Runs:**
+    ```
+    3/4/2026, 12:05:00 PM
+    3/4/2026, 12:10:00 PM
+    3/4/2026, 12:15:00 PM
+    3/4/2026, 12:20:00 PM
+    3/4/2026, 12:25:00 PM
+    ```
+  </Tab>
+
+  <Tab title="Daily Midnight">
+    Run at midnight every day.
+
+    **Expression:**
+    ```
+    0 0 * * *
+    ```
+
+    **Description:**
+    ```
+    At 12:00 AM
+    ```
+
+    **Next Runs:**
+    ```
+    3/5/2026, 12:00:00 AM
+    3/6/2026, 12:00:00 AM
+    3/7/2026, 12:00:00 AM
+    3/8/2026, 12:00:00 AM
+    3/9/2026, 12:00:00 AM
+    ```
+  </Tab>
+
+  <Tab title="Monthly Report">
+    Run on the 1st day of each month at 8 AM.
+
+    **Expression:**
+    ```
+    0 8 1 * *
+    ```
+
+    **Description:**
+    ```
+    At 8:00 AM, on day 1 of the month
+    ```
+
+    **Next Runs:**
+    ```
+    4/1/2026, 8:00:00 AM
+    5/1/2026, 8:00:00 AM
+    6/1/2026, 8:00:00 AM
+    7/1/2026, 8:00:00 AM
+    8/1/2026, 8:00:00 AM
+    ```
+  </Tab>
+
+  <Tab title="Business Hours">
+    Run every 30 minutes during business hours (9 AM - 5 PM) on weekdays.
+
+    **Expression:**
+    ```
+    0,30 9-17 * * 1-5
+    ```
+
+    **Description:**
+    ```
+    At minute 0 and 30, between 9:00 AM and 5:59 PM, Monday through Friday
+    ```
+
+    **Next Runs:**
+    ```
+    3/5/2026, 9:00:00 AM
+    3/5/2026, 9:30:00 AM
+    3/5/2026, 10:00:00 AM
+    3/5/2026, 10:30:00 AM
+    3/5/2026, 11:00:00 AM
+    ```
+  </Tab>
+
+  <Tab title="Quarterly">
+    Run on the first day of each quarter at midnight.
+
+    **Expression:**
+    ```
+    0 0 1 1,4,7,10 *
+    ```
+
+    **Description:**
+    ```
+    At 12:00 AM, on day 1 of the month, only in January, April, July, and October
+    ```
+
+    **Next Runs:**
+    ```
+    4/1/2026, 12:00:00 AM
+    7/1/2026, 12:00:00 AM
+    10/1/2026, 12:00:00 AM
+    1/1/2027, 12:00:00 AM
+    4/1/2027, 12:00:00 AM
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:737-752`:
+
+```typescript
+case 'cron-parser': {
+  const expr = input.trim();
+  if (!expr) 
+    return { output: 'Enter a cron expression (5 fields: min hour dom mon dow)' };
+  
+  try {
+    const cronstrueMod = await import('cronstrue');
+    const cronstrue = cronstrueMod.default || cronstrueMod;
+    const description = cronstrue.toString(expr, { 
+      throwExceptionOnParseError: true 
+    });
+    
+    if (action === 'next-runs') {
+      const runs = getNextCronRuns(expr, 5);
+      return { output: runs.join('\n'), meta: description };
+    }
+    
+    return { output: description, meta: `Expression: ${expr}` };
+  } catch (e) {
+    return { output: e instanceof Error ? e.message : 'Invalid cron expression' };
+  }
+}
+```
+
+### Dependencies
+
+- **cronstrue**: Converts cron expressions to human-readable text
+- **getNextCronRuns()**: Custom implementation calculating future run times
+
+## Common Patterns
+
+### Every Minute
+
+```
+* * * * *
+```
+
+Description: "Every minute"
+
+### Every Hour
+
+```
+0 * * * *
+```
+
+Description: "Every hour"
+
+### Every Day at Noon
+
+```
+0 12 * * *
+```
+
+Description: "At 12:00 PM"
+
+### Every Sunday
+
+```
+0 0 * * 0
+```
+
+Description: "At 12:00 AM, only on Sunday"
+
+### First of Month
+
+```
+0 0 1 * *
+```
+
+Description: "At 12:00 AM, on day 1 of the month"
+
+### Every 15 Minutes
+
+```
+*/15 * * * *
+```
+
+Description: "Every 15 minutes"
+
+### Weekdays at 6 AM
+
+```
+0 6 * * 1-5
+```
+
+Description: "At 6:00 AM, Monday through Friday"
+
+### Weekend Nights
+
+```
+0 22 * * 6,0
+```
+
+Description: "At 10:00 PM, only on Saturday and Sunday"
+
+## Step Values
+
+Step syntax: `*/step` or `range/step`
+
+| Expression | Meaning |
+|------------|----------|
+| `*/5 * * * *` | Every 5 minutes |
+| `0 */2 * * *` | Every 2 hours |
+| `0 0 */3 * *` | Every 3 days |
+| `0-30/10 * * * *` | At minutes 0, 10, 20, 30 |
+| `0 9-17/2 * * *` | At 9, 11, 13, 15, 17 |
+
+## Range Expressions
+
+| Expression | Meaning |
+|------------|----------|
+| `0-5` | Values 0 through 5 |
+| `1-31` | All days of month |
+| `9-17` | Business hours (9 AM - 5 PM) |
+| `1-5` | Weekdays (Monday-Friday) |
+
+## List Expressions
+
+| Expression | Meaning |
+|------------|----------|
+| `0,15,30,45` | Specific minutes |
+| `1,15` | 1st and 15th of month |
+| `1,4,7,10` | Quarterly (Jan, Apr, Jul, Oct) |
+| `6,0` | Weekends (Saturday, Sunday) |
+
+## Error Handling
+
+Common error messages:
+
+### Invalid Expression
+
+```
+Invalid cron expression (need 5 fields)
+```
+
+**Fix:** Ensure you have exactly 5 fields separated by spaces.
+
+### Out of Range
+
+```
+Error: Minute value must be between 0 and 59
+```
+
+**Fix:** Check field ranges in the syntax reference.
+
+### Invalid Step
+
+```
+Error: Invalid step value
+```
+
+**Fix:** Step values must be numeric and within field range.
+
+## Cron vs Crontab
+
+<Info>
+  **Standard cron (5 fields):** Minute, Hour, Day, Month, DayOfWeek
+  
+  **Crontab (6 fields):** Adds a seconds field (not supported by this tool)
+  
+  **Extended (7 fields):** Adds year field (not supported by this tool)
+</Info>
+
+## Time Zone Handling
+
+<Warning>
+  Cron schedules run in the server's local time zone. Next run times are displayed in your browser's time zone. Always verify time zone settings when deploying scheduled tasks.
+</Warning>
+
+## Related Tools
+
+- [Unix Time Converter](/tools/unix-time-converter) - Convert timestamps
+- [JSON Format/Validate](/tools/json-format-validate) - Format cron job configuration files
+- [RegExp Tester](/tools/regexp-tester) - Test patterns for log parsing

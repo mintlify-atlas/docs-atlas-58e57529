@@ -1,0 +1,227 @@
+---
+title: Installation
+description: Access Kayston's Forge as a hosted static site or install as a Progressive Web App (PWA) for offline usage.
+---
+
+Kayston's Forge is a fully static application that runs entirely in your browser. No traditional installation is required—just visit the hosted URL.
+
+## Accessing Kayston's Forge
+
+Kayston's Forge is hosted as a static site on Vercel and accessible from any modern web browser.
+
+<Steps>
+  <Step title="Open your browser">
+    Kayston's Forge works in all modern browsers:
+    - **Chrome** / Chromium (recommended)
+    - **Firefox**
+    - **Safari**
+    - **Edge**
+    
+    <Note>
+      JavaScript must be enabled. All processing runs client-side.
+    </Note>
+  </Step>
+
+  <Step title="Navigate to the hosted URL">
+    Visit the Kayston's Forge URL in your browser. The application loads instantly as a static site with no backend dependencies.
+    
+    <Tip>
+      Bookmark the URL for quick access. You can also add it to your browser's home screen or bookmarks bar.
+    </Tip>
+  </Step>
+
+  <Step title="Start using tools immediately">
+    No account creation, login, or configuration required. The app opens with the default tool (JSON Format/Validate) ready to use.
+    
+    All 47 tools are available from the sidebar or command palette (`Cmd/Ctrl + K`).
+  </Step>
+</Steps>
+
+## Installing as a PWA
+
+Kayston's Forge includes a PWA manifest and service worker, enabling offline access after the first load.
+
+<Note>
+  **Benefits of PWA installation:**
+  - Offline access to all 47 tools
+  - Faster load times (cached assets)
+  - Native app-like experience
+  - Desktop/home screen icon
+</Note>
+
+### Chrome / Edge (Desktop)
+
+<Steps>
+  <Step title="Visit Kayston's Forge">
+    Open the application in Chrome or Edge.
+  </Step>
+
+  <Step title="Install the PWA">
+    Click the **install icon** (⊕ or computer icon) in the address bar, or:
+    
+    1. Click the **three-dot menu** (⋮) in the top-right
+    2. Select **"Install Kayston's Forge..."** or **"Apps" → "Install this site as an app"**
+    3. Confirm the installation in the dialog
+  </Step>
+
+  <Step title="Launch the app">
+    The PWA opens in a standalone window without browser UI. Access it from:
+    - **Windows**: Start menu or desktop shortcut
+    - **macOS**: Applications folder or Launchpad
+    - **Linux**: Application menu
+  </Step>
+</Steps>
+
+### Safari (macOS / iOS)
+
+<Steps>
+  <Step title="Open in Safari">
+    Visit Kayston's Forge in Safari (desktop or iOS).
+  </Step>
+
+  <Step title="Add to home screen or dock">
+    **macOS:**
+    1. Click **File → Add to Dock**
+    2. The app appears in your Dock with a custom icon
+    
+    **iOS:**
+    1. Tap the **Share** button (square with arrow)
+    2. Select **"Add to Home Screen"**
+    3. Tap **"Add"** in the top-right
+  </Step>
+
+  <Step title="Launch the app">
+    - **macOS**: Click the Dock icon
+    - **iOS**: Tap the home screen icon
+  </Step>
+</Steps>
+
+### Firefox (Desktop)
+
+<Steps>
+  <Step title="Visit Kayston's Forge">
+    Open the application in Firefox.
+  </Step>
+
+  <Step title="Install the PWA">
+    Click the **install icon** (⊕) in the address bar, or:
+    
+    1. Click the **three-line menu** (≡) in the top-right
+    2. Select **"Install"** or **"Page Actions → Install site"**
+    3. Confirm the installation
+  </Step>
+
+  <Step title="Launch the app">
+    Access the installed app from your system's application menu or desktop shortcut.
+  </Step>
+</Steps>
+
+### Android (Chrome / Firefox)
+
+<Steps>
+  <Step title="Open in mobile browser">
+    Visit Kayston's Forge in Chrome or Firefox on Android.
+  </Step>
+
+  <Step title="Install prompt">
+    A banner prompts you to **"Add Kayston's Forge to Home screen."** Tap **"Install"** or **"Add."**
+    
+    If the banner doesn't appear:
+    1. Tap the **three-dot menu** (⋮)
+    2. Select **"Install app"** or **"Add to Home screen"**
+  </Step>
+
+  <Step title="Launch the app">
+    Tap the home screen icon to open Kayston's Forge in standalone mode.
+  </Step>
+</Steps>
+
+## Offline Usage
+
+Once installed as a PWA, Kayston's Forge works offline:
+
+<Card icon="wifi-slash">
+  **All 47 tools function without an internet connection** after the initial load. The service worker caches:
+  - Application code (Next.js static export)
+  - Tool processing logic
+  - UI assets (icons, fonts, styles)
+</Card>
+
+<Warning>
+  Some features require an internet connection:
+  - Loading external images in Base64 Image Encode/Decode
+  - Fetching remote resources in HTML Preview
+</Warning>
+
+## Data Storage
+
+Kayston's Forge stores data locally using two mechanisms:
+
+| Storage | Purpose | Max Size |
+|---------|---------|----------|
+| **IndexedDB** (Dexie) | Tool history (50 entries per tool), favorites, settings | ~50 MB (browser-dependent) |
+| **localStorage** | UI state (sidebar toggle, active tool, command palette) | ~5 MB |
+
+<Note>
+  All data remains in your browser. Clearing browser data deletes tool history and settings.
+</Note>
+
+## Uninstalling the PWA
+
+### Chrome / Edge (Desktop)
+
+1. Right-click the PWA window's title bar or taskbar icon
+2. Select **"Uninstall"** or **"Remove from Chrome/Edge"**
+3. Confirm the uninstallation
+
+### Safari (macOS)
+
+1. Right-click the Dock icon
+2. Select **"Options → Remove from Dock"**
+
+### Mobile (iOS / Android)
+
+1. Long-press the home screen icon
+2. Select **"Remove App"** or **"Uninstall"**
+
+## Running Locally (Developers)
+
+Developers can run Kayston's Forge locally:
+
+<CodeGroup>
+```bash Clone and install
+git clone <repository-url>
+cd kaystons-forge
+npm install
+```
+
+```bash Development server
+npm run dev
+# Opens at http://localhost:3000
+```
+
+```bash Build static export
+npm run build
+# Output: out/ directory
+```
+
+```bash Run tests
+npm run test
+# Runs 157 tests with Vitest
+```
+</CodeGroup>
+
+<Tip>
+  The static export (`out/` directory) can be served from any static host: Vercel, Netlify, GitHub Pages, S3, or a local HTTP server.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Learn to use your first tool in under 2 minutes
+  </Card>
+  <Card title="Introduction" icon="book" href="/introduction">
+    Explore features, architecture, and privacy details
+  </Card>
+</CardGroup>

@@ -1,0 +1,194 @@
+---
+title: JSON to Code
+description: Generate typed structs and interfaces from JSON in TypeScript, Python, Go, and Rust
+---
+
+# JSON to Code
+
+Generate type definitions from JSON objects. Infers structure and produces idiomatic interfaces, dataclasses, structs, or types for your target language.
+
+## Overview
+
+The JSON to Code tool analyzes a JSON value and generates:
+- **TypeScript** — Interfaces with proper type annotations
+- **Python** — Dataclasses with type hints
+- **Go** — Structs with json tags
+- **Rust** — Structs with Serde derives
+
+Supports nested objects, arrays, and primitive types. Field names are sanitized to valid identifiers for each language.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="API client generation" icon="plug">
+    Generate types from API responses for type-safe client code
+  </Card>
+  <Card title="Schema scaffolding" icon="hammer">
+    Quickly scaffold type definitions from example JSON data
+  </Card>
+  <Card title="Migration" icon="arrows-rotate">
+    Port JSON structures between languages with correct naming conventions
+  </Card>
+  <Card title="Documentation" icon="book">
+    Auto-generate type definitions for documentation or code review
+  </Card>
+</CardGroup>
+
+## Input Format
+
+Paste a JSON object or array. The tool accepts:
+- Strict JSON
+- Relaxed JSON (unquoted keys, single quotes, trailing commas)
+- Nested objects and arrays
+
+```json Example
+{
+  "user": {
+    "id": 123,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "is_active": true,
+    "tags": ["admin", "verified"]
+  }
+}
+```
+
+## Output Formats
+
+<Tabs>
+  <Tab title="TypeScript">
+    Generates interfaces with TypeScript type annotations. Keys that aren't valid identifiers (e.g., `"first-name"`) are quoted.
+    
+    ```typescript
+    interface User {
+      id: number;
+      name: string;
+      email: string;
+      is_active: boolean;
+      tags: string[];
+    }
+
+    interface Root {
+      user: User;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Python">
+    Generates `@dataclass` classes with type hints (`int`, `float`, `str`, `bool`, `List`, `Optional`). Field names are converted to `snake_case`.
+    
+    ```python
+    from dataclasses import dataclass
+    from typing import Any, List, Optional
+
+    @dataclass
+    class User:
+        id: int
+        name: str
+        email: str
+        is_active: bool
+        tags: List[str]
+
+    @dataclass
+    class Root:
+        user: User
+    ```
+  </Tab>
+  
+  <Tab title="Go">
+    Generates structs with `json` tags. Field names are converted to `PascalCase`.
+    
+    ```go
+    package main
+
+    type User struct {
+      Id       int64    `json:"id"`
+      Name     string   `json:"name"`
+      Email    string   `json:"email"`
+      IsActive bool     `json:"is_active"`
+      Tags     []string `json:"tags"`
+    }
+
+    type Root struct {
+      User User `json:"user"`
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Rust">
+    Generates structs with `#[derive(Debug, Serialize, Deserialize)]` and `#[serde(rename = "...")]` when field names differ from Rust conventions.
+    
+    ```rust
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct User {
+        pub id: i64,
+        pub name: String,
+        pub email: String,
+        pub is_active: bool,
+        pub tags: Vec<String>,
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    pub struct Root {
+        pub user: User,
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Type Inference Rules
+
+<AccordionGroup>
+  <Accordion title="Primitives">
+    - `null` → `null` (TS), `Optional[Any]` (Python), `interface{}` (Go), `Option<serde_json::Value>` (Rust)
+    - `true`/`false` → `boolean`, `bool`, `bool`, `bool`
+    - Numbers → `number` (TS), `int`/`float` (Python), `int64`/`float64` (Go), `i64`/`f64` (Rust)
+    - Strings → `string`, `str`, `string`, `String`
+  </Accordion>
+  
+  <Accordion title="Arrays">
+    - Empty arrays → `unknown[]`, `List[Any]`, `[]interface{}`, `Vec<serde_json::Value>`
+    - Non-empty → Infers element type from first item: `T[]`, `List[T]`, `[]T`, `Vec<T>`
+  </Accordion>
+  
+  <Accordion title="Objects">
+    - Each object becomes a named interface/struct/class
+    - Field names are sanitized:
+      - TypeScript: Invalid identifiers are quoted
+      - Python: Converted to `snake_case`, comments preserve original names
+      - Go: Converted to `PascalCase`, json tags preserve original names
+      - Rust: Converted to `snake_case`, `#[serde(rename)]` when needed
+  </Accordion>
+</AccordionGroup>
+
+## Implementation Details
+
+The tool recursively traverses the JSON structure, collecting type definitions in a `Map` to avoid duplicates. Each target language has its own `infer()` function and naming conventions.
+
+**Source:** `lib/tools/json-to-code.ts:5-143`
+
+<Warning>
+  Type inference is heuristic. For arrays, the tool infers the type from the **first element only**. Heterogeneous arrays will produce inaccurate types.
+</Warning>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Generate TypeScript (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="JSON Format/Validate" href="/tools/json-format-validate" icon="brackets-curly">
+    Validate and format JSON with prettify/minify
+  </Card>
+  <Card title="JSON to YAML" href="/tools/json-to-yaml" icon="arrow-right">
+    Convert JSON to YAML format
+  </Card>
+  <Card title="cURL to Code" href="/tools/curl-to-code" icon="terminal">
+    Convert cURL commands to code
+  </Card>
+</CardGroup>

@@ -1,0 +1,263 @@
+---
+title: Base64 Image Encode/Decode
+description: Convert images to Base64 data URLs and decode Base64 image data with live preview support
+---
+
+The Base64 Image Encode/Decode tool converts images to and from Base64-encoded data URLs. It provides instant visual preview of decoded images and handles various image formats including PNG, JPEG, GIF, SVG, and WebP.
+
+## Features
+
+- Bidirectional Base64 image conversion
+- Data URL parsing and generation
+- Live image preview
+- MIME type detection and display
+- Support for all common image formats
+- Handles both raw Base64 and data URLs
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Email Embedding" icon="envelope">
+    Embed images directly in HTML emails without external hosting
+  </Card>
+  <Card title="CSS Sprites" icon="palette">
+    Inline small icons in CSS for reduced HTTP requests
+  </Card>
+  <Card title="Single-File HTML" icon="file-code">
+    Create self-contained HTML documents with embedded images
+  </Card>
+  <Card title="API Payloads" icon="code">
+    Include image data in JSON API requests/responses
+  </Card>
+</CardGroup>
+
+## Supported Formats
+
+The tool works with all browser-supported image formats:
+
+- **PNG** - Lossless compression, transparency support
+- **JPEG/JPG** - Lossy compression, photos
+- **GIF** - Animation support, limited colors
+- **SVG** - Vector graphics
+- **WebP** - Modern format with superior compression
+- **BMP** - Uncompressed bitmap
+- **ICO** - Icons and favicons
+
+## Input Formats
+
+### Data URL (for decoding)
+
+Complete data URL with MIME type:
+
+```
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...
+```
+
+### Raw Base64 (for encoding)
+
+Base64 string without data URL prefix:
+
+```
+iVBORw0KGgoAAAANSUhEUgAAAAUA...
+```
+
+<Note>
+  When converting raw Base64 to a data URL, the tool defaults to `image/png` MIME type.
+</Note>
+
+## Output Format
+
+### From Data URL
+
+Extracts the Base64 portion and displays metadata:
+
+```
+Output: iVBORw0KGgoAAAANSUhEUgAAAAUA...
+Meta: data:image/png;base64
+Preview: [Image displayed]
+```
+
+### To Data URL
+
+Generates complete data URL:
+
+```
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Decode Data URL">
+    Extract Base64 from a data URL.
+
+    **Input:**
+    ```
+    data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0icmVkIi8+PC9zdmc+
+    ```
+
+    **Output (Base64):**
+    ```
+    PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0icmVkIi8+PC9zdmc+
+    ```
+
+    **Meta:**
+    ```
+    data:image/svg+xml;base64
+    ```
+
+    **Preview:** Red circle SVG displayed
+  </Tab>
+
+  <Tab title="Encode to Data URL">
+    Convert raw Base64 to a data URL.
+
+    **Input (Raw Base64):**
+    ```
+    iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+    ```
+
+    **Output (Data URL):**
+    ```
+    data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+    ```
+
+    **Preview:** 1x1 pixel red image
+  </Tab>
+
+  <Tab title="Inspect Image Data">
+    View image metadata and preview.
+
+    **Input:**
+    ```
+    data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/...
+    ```
+
+    **Output:**
+    - Extracted Base64 string
+    - MIME type: `image/jpeg`
+    - Live preview of the JPEG image
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:406-422`:
+
+```typescript
+case 'base64-image': {
+  const raw = input.trim();
+  if (!raw) return { output: '' };
+  
+  // Decode data URL
+  if (raw.startsWith('data:image/')) {
+    const [head, body] = raw.split(',', 2);
+    return {
+      output: body || '',
+      meta: head,
+      previewDataUrl: raw,
+    };
+  }
+  
+  // Encode to data URL
+  const dataUrl = `data:image/png;base64,${raw}`;
+  return {
+    output: dataUrl,
+    previewDataUrl: dataUrl,
+  };
+}
+```
+
+## Common Patterns
+
+### Inline CSS Background
+
+Embed small icons in CSS:
+
+```css
+.icon {
+  background-image: url('data:image/png;base64,iVBORw0KGg...');
+  width: 16px;
+  height: 16px;
+}
+```
+
+### HTML Image Tag
+
+Embed images directly in HTML:
+
+```html
+<img src="data:image/png;base64,iVBORw0KGg..." alt="Logo" />
+```
+
+### JSON API Payload
+
+Include image data in API responses:
+
+```json
+{
+  "user": {
+    "name": "Alice",
+    "avatar": "data:image/jpeg;base64,/9j/4AAQ..."
+  }
+}
+```
+
+### Canvas Export
+
+Export canvas as Base64:
+
+```javascript
+const canvas = document.querySelector('canvas');
+const dataUrl = canvas.toDataURL('image/png');
+// Result: data:image/png;base64,iVBORw0KGg...
+```
+
+## Size Considerations
+
+<Warning>
+  Base64 encoding increases file size by approximately 33%. A 100KB image becomes ~133KB when Base64-encoded.
+</Warning>
+
+### When to Use Base64 Images
+
+**Good for:**
+- Small icons and sprites (< 10KB)
+- Single-file HTML documents
+- Email templates
+- Reducing HTTP requests for tiny assets
+
+**Avoid for:**
+- Large photos or images (> 50KB)
+- Images that need caching
+- Responsive images with multiple sizes
+- Images used across many pages
+
+## MIME Type Reference
+
+| Format | MIME Type | Use Case |
+|--------|-----------|----------|
+| PNG | `image/png` | Icons, screenshots, transparency |
+| JPEG | `image/jpeg` | Photos, complex images |
+| GIF | `image/gif` | Simple animations |
+| SVG | `image/svg+xml` | Vector graphics, logos |
+| WebP | `image/webp` | Modern format, best compression |
+
+## Browser Compatibility
+
+<Info>
+  Data URLs are supported in all modern browsers. Maximum data URL size varies:
+  
+  - **Chrome**: ~512MB
+  - **Firefox**: No hard limit
+  - **Safari**: ~2GB
+  - **Edge**: ~512MB
+  
+  Practical limit: Keep under 1MB for best performance
+</Info>
+
+## Related Tools
+
+- [Base64 String](/tools/base64-string) - Encode/decode text
+- [SVG to CSS](/tools/svg-to-css) - Convert SVG to CSS background-image
+- [URL Encode/Decode](/tools/url-encode-decode) - URL encoding for data URLs

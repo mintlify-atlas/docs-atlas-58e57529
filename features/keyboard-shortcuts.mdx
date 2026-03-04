@@ -1,0 +1,158 @@
+---
+title: Keyboard Shortcuts
+description: Complete reference for keyboard shortcuts in Kayston's Forge
+---
+
+Kayston's Forge is designed for keyboard-driven workflows. All major actions have keyboard shortcuts for maximum productivity.
+
+## Global Shortcuts
+
+These shortcuts work from any page in the app.
+
+| Shortcut | Action | Context |
+|----------|--------|----------|
+| `Cmd/Ctrl+K` | Open Command Palette | Search and navigate to any tool |
+| `Cmd/Ctrl+1` | Toggle Sidebar | Show/hide the tool navigation sidebar |
+| `Cmd/Ctrl+[` | Previous Tool | Navigate to the previous tool in the registry |
+| `Cmd/Ctrl+]` | Next Tool | Navigate to the next tool in the registry |
+
+<Note>
+`Cmd` refers to the Command key on macOS. On Windows and Linux, use `Ctrl` instead.
+</Note>
+
+## Tool Workbench Shortcuts
+
+These shortcuts work when you're actively using a tool.
+
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl+Enter` | Execute Tool | Run the current tool with the active action (Beautify, Encode, etc.) |
+| `Cmd/Ctrl+Shift+C` | Copy Output | Copy the output text to your clipboard |
+| `Cmd/Ctrl+Shift+S` | Download Output | Download output as a text file |
+| `Esc` | Clear Input | Clear the input field (when not in Command Palette) |
+
+<Tip>
+`Cmd/Ctrl+Enter` is the fastest way to process your input. You don't need to click the action button.
+</Tip>
+
+## Command Palette Shortcuts
+
+These shortcuts work when the Command Palette is open.
+
+| Shortcut | Action |
+|----------|--------|
+| `↓` or `↑` | Navigate results |
+| `Enter` | Open selected tool |
+| `Esc` | Close palette |
+
+## Tool-Specific Shortcuts
+
+Some tools have specialized behavior:
+
+### QR Code Reader/Generator
+
+- **Upload mode**: Press `Esc` to cancel file selection
+- **Camera mode**: Press `Esc` to stop camera access
+
+### Text Diff Checker
+
+- Uses split-pane input with synchronized scrolling
+- `Cmd/Ctrl+Enter` runs the diff comparison
+
+### RegExp Tester
+
+- Action buttons switch between flag combinations (`gm`, `gim`, `g`)
+- `Cmd/Ctrl+Enter` re-runs the regex test
+
+## Action Button Shortcuts
+
+Many tools have multiple action buttons (e.g., Beautify vs. Minify for code formatters). While there are no dedicated keyboard shortcuts for switching between actions, you can:
+
+1. Use the mouse to select the desired action
+2. Press `Cmd/Ctrl+Enter` to execute
+
+Alternatively, the active action is remembered per tool, so your last-used action will be the default when you press `Cmd/Ctrl+Enter`.
+
+## Clipboard Operations
+
+The app integrates with the system clipboard:
+
+- **Copy output**: `Cmd/Ctrl+Shift+C` or click the Copy button
+- **Paste input**: Standard `Cmd/Ctrl+V` works in all text areas
+- **Visual feedback**: Success checkmark appears after copying
+
+## Navigation Workflow Examples
+
+### Switching Between Related Tools
+
+```text
+# You're on JSON Format/Validate and want to convert to YAML
+1. Press Cmd/Ctrl+K
+2. Type "json to yaml"
+3. Press Enter
+```
+
+### Cycling Through Tools for Exploration
+
+```text
+# Browse tools in order
+Cmd/Ctrl+]  → Next tool
+Cmd/Ctrl+[  → Previous tool
+```
+
+### Quick Workflow for Processing Data
+
+```text
+1. Cmd/Ctrl+V — Paste input
+2. Cmd/Ctrl+Enter — Process
+3. Cmd/Ctrl+Shift+C — Copy output
+4. Cmd/Ctrl+K — Open palette to switch tools
+```
+
+## Browser-Specific Notes
+
+<Warning>
+Some browser shortcuts may conflict with app shortcuts:
+
+- **Firefox**: `Cmd/Ctrl+K` focuses the search bar by default — you may need to use the search icon to open the Command Palette
+- **Chrome**: `Cmd+[` and `Cmd+]` navigate browser history — consider using the sidebar or Command Palette instead
+</Warning>
+
+## Accessibility
+
+All keyboard shortcuts are designed with accessibility in mind:
+
+- **Focus management**: Opening the Command Palette automatically focuses the search input
+- **Keyboard-only navigation**: All features are accessible without a mouse
+- **Visual feedback**: Selected items are highlighted, and actions show confirmation states
+- **Screen reader support**: ARIA labels and roles are provided for interactive elements
+
+## Customization
+
+Keyboard shortcuts are currently **not customizable**. The shortcuts follow common conventions:
+
+- `Cmd/Ctrl+K` — Industry standard for command palettes (VS Code, GitHub, Notion)
+- `Cmd/Ctrl+Enter` — Common for executing actions (Slack, Discord, many IDEs)
+- `Cmd/Ctrl+Shift+C/S` — Standard for clipboard and save operations
+
+If you have feedback on shortcuts, please open an issue on the GitHub repository.
+
+## Quick Reference Card
+
+```text
+GLOBAL
+Cmd/Ctrl+K          Command Palette
+Cmd/Ctrl+1          Toggle Sidebar
+Cmd/Ctrl+[/]        Previous/Next Tool
+
+WORKBENCH
+Cmd/Ctrl+Enter      Execute Tool
+Cmd/Ctrl+Shift+C    Copy Output
+Cmd/Ctrl+Shift+S    Download Output
+Esc                 Clear Input
+
+PALETTE
+↓/↑                 Navigate
+Enter               Select
+Esc                 Close
+```

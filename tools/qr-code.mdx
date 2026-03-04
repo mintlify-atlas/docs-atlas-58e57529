@@ -1,0 +1,160 @@
+---
+title: QR Code Reader/Generator
+description: Generate QR codes from text or decode QR codes from images
+---
+
+## Overview
+
+The QR Code Reader/Generator provides bidirectional QR code functionality: encode text into QR codes and decode QR codes from images. Perfect for creating shareable links, encoding data, or reading QR codes from screenshots.
+
+## Use Cases
+
+- **URL Sharing**: Generate QR codes for websites, app deep links, or landing pages
+- **Data Encoding**: Encode contact information (vCards), WiFi credentials, or configuration data
+- **Event Management**: Create QR codes for tickets, check-ins, or registration
+- **Documentation**: Decode QR codes from screenshots or images for inspection
+- **Testing**: Generate test QR codes for mobile app development
+
+## Input Format
+
+### For Generation
+Enter any text to encode as a QR code:
+
+```
+https://example.com
+```
+
+```
+BEGIN:VCARD
+VERSION:3.0
+FN:John Doe
+TEL:+1-555-0100
+EMAIL:john@example.com
+END:VCARD
+```
+
+### For Decoding
+Paste an image containing a QR code, or upload an image file through the UI.
+
+## Output Format
+
+### Generation
+Produces a visual QR code image that can be:
+- Downloaded as PNG
+- Copied to clipboard
+- Scanned by mobile devices
+
+### Decoding
+Extracts the text content from the QR code:
+
+```
+https://example.com/path?param=value
+```
+
+## Examples
+
+<CodeGroup>
+```text Input: Simple URL
+https://kaystons-forge.dev
+```
+
+```text Output
+[QR Code Image]
+Scannable QR code encoding the URL
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: WiFi Credentials
+WIFI:T:WPA;S:MyNetwork;P:MyPassword;;
+```
+
+```text Output
+[QR Code Image]
+Scannable WiFi configuration QR code
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Contact Card
+BEGIN:VCARD
+VERSION:3.0
+FN:Jane Smith
+ORG:Acme Corp
+TEL:+1-555-0199
+EMAIL:jane.smith@acme.com
+URL:https://acme.com
+END:VCARD
+```
+
+```text Output
+[QR Code Image]
+Contact card QR code
+```
+</CodeGroup>
+
+## Features
+
+- **High Compatibility**: Generated QR codes work with all standard readers
+- **Error Correction**: Built-in error correction for robust scanning
+- **Large Data Support**: Handles URLs, vCards, structured data
+- **Image Decoding**: Reads QR codes from uploaded images or pasted screenshots
+- **Export Options**: Download as PNG or copy to clipboard
+
+## QR Code Formats
+
+### URL
+```
+https://example.com
+```
+
+### Email
+```
+mailto:user@example.com?subject=Hello&body=Message
+```
+
+### SMS
+```
+smsto:+1-555-0100:Hello from QR code
+```
+
+### Phone
+```
+tel:+1-555-0100
+```
+
+### WiFi
+```
+WIFI:T:WPA;S:NetworkName;P:Password;H:false;;
+```
+
+### vCard
+```
+BEGIN:VCARD
+VERSION:3.0
+FN:Full Name
+TEL:+1-555-0100
+EMAIL:email@example.com
+END:VCARD
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:563-564`:
+
+```typescript
+case 'qr-code':
+  return { output: input };
+```
+
+The QR generation and decoding logic is implemented in the UI component using the `qrcode` and `jsqr` libraries:
+- **qrcode**: Generates QR code images from text
+- **jsqr**: Decodes QR codes from image data
+
+<Note>
+QR codes can store up to approximately 3KB of data, depending on error correction level. For optimal scanning, use high contrast and adequate size.
+</Note>
+
+<Warning>
+Do not encode sensitive information (passwords, API keys, private keys) in QR codes that will be shared publicly or scanned by untrusted devices.
+</Warning>

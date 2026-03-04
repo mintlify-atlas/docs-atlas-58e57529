@@ -1,0 +1,119 @@
+---
+title: HTML Entity Encode/Decode
+description: Convert text to HTML entities and decode HTML entities back to text
+---
+
+The **HTML Entity Encode/Decode** tool converts special characters in text to their HTML entity equivalents and vice versa. This is essential for safely displaying user-generated content in HTML documents and preventing XSS vulnerabilities.
+
+## Use Cases
+
+- **Sanitizing user input** before displaying it in HTML pages
+- **Encoding special characters** like `<`, `>`, `&`, `"`, and `'` for safe HTML rendering
+- **Decoding HTML entities** from scraped web content or API responses
+- **Preparing text for XML/HTML attributes** where special characters must be escaped
+- **Debugging HTML source code** by decoding entity-encoded content
+
+## How It Works
+
+### Encode Mode (Default)
+
+Converts these special characters to HTML entities:
+
+- `&` → `&amp;`
+- `<` → `&lt;`
+- `>` → `&gt;`
+- `"` → `&quot;`
+- `'` → `&#39;`
+
+### Decode Mode
+
+Converts HTML entities back to their original characters in reverse order.
+
+<Note>
+  The decoder handles the five most common HTML entities. For comprehensive entity support including named entities like `&nbsp;`, `&copy;`, etc., use a dedicated HTML parser.
+</Note>
+
+## Input Format
+
+**Encode:** Plain text with special characters
+
+```
+Click the <button> to "Save & Continue"
+```
+
+**Decode:** HTML entity-encoded text
+
+```
+Click the &lt;button&gt; to &quot;Save &amp; Continue&quot;
+```
+
+## Output Format
+
+**Encode Output:**
+
+```
+Click the &lt;button&gt; to &quot;Save &amp; Continue&quot;
+```
+
+**Decode Output:**
+
+```
+Click the <button> to "Save & Continue"
+```
+
+## Examples
+
+<CodeGroup>
+
+```text Encoding Special Characters
+Input:
+<script>alert('XSS')</script>
+
+Output:
+&lt;script&gt;alert(&#39;XSS&#39;)&lt;/script&gt;
+```
+
+```text Decoding HTML Entities
+Input:
+Rock &amp; Roll
+
+Output:
+Rock & Roll
+```
+
+```text Encoding Quotes for Attributes
+Input:
+He said "Hello" & waved
+
+Output:
+He said &quot;Hello&quot; &amp; waved
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:466-467`
+</Info>
+
+The tool uses a synchronous string replacement pipeline:
+
+- **Encode:** Replaces special characters in a specific order (& first, then < > " ')
+- **Decode:** Reverses the process in the correct order (& last to avoid double-decoding)
+
+### Performance
+
+- **Synchronous processing:** All operations run client-side with no network calls
+- **No regex overhead:** Uses simple string replacements for maximum speed
+- **Memory efficient:** Works with strings up to 5MB
+
+<Warning>
+  This tool is designed for basic HTML entity encoding/decoding. For complex scenarios involving the full spectrum of named HTML entities (600+ entities like `&mdash;`, `&trade;`, etc.), use a dedicated HTML parser library.
+</Warning>
+
+## Related Tools
+
+- [Backslash Escape/Unescape](/tools/backslash-escape) - Escape special characters with backslashes
+- [URL Encode/Decode](/tools/url-encode-decode) - URL-safe encoding
+- [HTML Beautify/Minify](/tools/html-beautify) - Format HTML content

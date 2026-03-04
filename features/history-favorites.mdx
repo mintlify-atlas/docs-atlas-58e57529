@@ -1,0 +1,227 @@
+---
+title: History & Favorites
+description: Automatic history tracking with IndexedDB for privacy-first persistence
+---
+
+Kayston's Forge automatically saves your tool usage history locally in your browser using IndexedDB. All data stays on your device — nothing is sent to any server.
+
+## History Tracking
+
+### How It Works
+
+Every time you execute a tool action (e.g., format JSON, encode Base64, generate a hash), the app saves:
+
+- **Tool ID** — Which tool was used
+- **Input** — The text you provided (truncated to 100,000 characters)
+- **Output** — The result produced by the tool
+- **Timestamp** — When the action was performed
+- **Starred status** — Whether you've favorited this entry (future feature)
+
+<Info>
+History is saved **per tool**. Each tool maintains its own separate history of up to 50 entries.
+</Info>
+
+### Storage Limits
+
+- **Max entries per tool**: 50
+- **Input truncation**: Inputs longer than 100,000 characters are truncated with `...` appended
+- **Auto-cleanup**: When you exceed 50 entries, the oldest entries are automatically deleted
+
+### Privacy Guarantees
+
+- All history is stored in **IndexedDB** on your device
+- No data is transmitted to any server
+- History is isolated per browser profile
+- Clearing browser data deletes your history
+- No analytics or tracking of what you process
+
+## IndexedDB Structure
+
+Kayston's Forge uses **Dexie.js** as a wrapper around IndexedDB for reliable storage.
+
+### Database Schema
+
+```typescript
+Database: KaystonsForgeDB
+
+Tables:
+  - history:
+      - id (auto-increment)
+      - toolId (indexed)
+      - input (text)
+      - output (text)
+      - timestamp (indexed)
+      - starred (indexed)
+
+  - favorites:
+      - id (auto-increment)
+      - toolId (indexed)
+
+  - settings:
+      - id (primary key)
+      - value (any)
+```
+
+### Implementation Details
+
+The history system is implemented in:
+
+- **`lib/db.ts`** — Dexie database definition and migration logic
+- **`hooks/useHistory.ts`** — React hook for saving, loading, and clearing history
+- **`components/tools/ToolWorkbench.tsx`** — UI integration for history panel
+
+<CodeGroup>
+```typescript lib/db.ts (excerpt)
+export class KaystonsForgeDB extends Dexie {
+  history!: Table<HistoryEntry, number>;
+  favorites!: Table<{ id?: number; toolId: string }, number>;
+  settings!: Table<{ id: string; value: unknown }, string>;
+
+  constructor() {
+    super('KaystonsForgeDB');
+    this.version(1).stores({
+      history: '++id, toolId, timestamp, starred',
+      favorites: '++id, toolId',
+      settings: 'id',
+    });
+  }
+}
+```
+
+```typescript hooks/useHistory.ts (excerpt)
+export function useHistory(toolId: string) {
+  const save = useCallback(
+    async (input: string, output: string) => {
+      const trimmed = input.length > 100_000 
+        ? `${input.slice(0, 100_000)}...` 
+        : input;
+      await db.history.add({ 
+        toolId, 
+        input: trimmed, 
+        output, 
+        timestamp: Date.now(), 
+        starred: false 
+      });
+      // Auto-cleanup: keep only 50 most recent entries
+      const old = await db.history
+        .where('toolId').equals(toolId)
+        .reverse()
+        .offset(50)
+        .toArray();
+      if (old.length) {
+        await db.history.bulkDelete(old.map(x => x.id!));
+      }
+    },
+    [toolId]
+  );
+
+  const clear = useCallback(async () => {
+    await db.history.where('toolId').equals(toolId).delete();
+  }, [toolId]);
+
+  return { save, clear };
+}
+```
+</CodeGroup>
+
+## Viewing History
+
+<Warning>
+The history panel UI is currently **not implemented** in the ToolWorkbench. While history is being saved automatically, there's no user interface to view or restore previous entries yet. This feature is planned for a future release.
+</Warning>
+
+The planned UI will include:
+
+- **History panel** — Accessible via a button in the tool workbench
+- **Entry list** — Recent entries sorted by timestamp (newest first)
+- **Restore action** — Click an entry to restore its input/output
+- **Clear history** — Button to delete all entries for the current tool
+- **Search/filter** — Find specific entries by input/output content
+
+## Favorites System
+
+The `favorites` table is designed for marking tools as favorites for quick access.
+
+<Note>
+The favorites feature is **not yet implemented** in the UI. The database table exists but is not currently used by any component.
+</Note>
+
+Planned functionality:
+
+- **Star tools** — Mark frequently used tools as favorites
+- **Quick access** — Favorites appear at the top of the sidebar
+- **Persistent** — Favorites are stored in IndexedDB and persist across sessions
+
+## Settings Storage
+
+The `settings` table is a key-value store for app preferences. Currently unused, but reserved for:
+
+- Theme preferences (light/dark mode)
+- Default actions for tools
+- UI layout preferences
+- Accessibility settings
+
+## Data Migration
+
+The app includes automatic migration from the legacy database name `AdlersForgeDB` to the current `KaystonsForgeDB`.
+
+```typescript
+// Migration logic in lib/db.ts
+if (names.includes('AdlersForgeDB')) {
+  const oldDb = new Dexie('AdlersForgeDB');
+  // ... copy history from old DB to new DB
+  await oldDb.delete();
+}
+```
+
+This ensures users who had the app installed under the old name don't lose their history.
+
+## Clearing History
+
+### Per Tool
+
+Use the clear history button in the tool workbench (when implemented) to delete all entries for the current tool.
+
+### All Data
+
+To completely clear all app data:
+
+1. Open browser DevTools (`F12`)
+2. Go to **Application** > **Storage** > **IndexedDB**
+3. Right-click **KaystonsForgeDB** and select **Delete database**
+
+Alternatively, clear all browser data for the Kayston's Forge domain:
+
+- **Chrome**: Settings > Privacy and security > Clear browsing data > Cookies and site data
+- **Firefox**: Settings > Privacy & Security > Cookies and Site Data > Manage Data
+- **Safari**: Preferences > Privacy > Manage Website Data
+
+## Browser Compatibility
+
+IndexedDB is supported in all modern browsers:
+
+- ✅ Chrome 24+
+- ✅ Firefox 16+
+- ✅ Safari 10+
+- ✅ Edge 12+
+
+<Tip>
+If IndexedDB is unavailable (e.g., in private browsing mode in some browsers), history will not be saved, but the app will continue to function normally.
+</Tip>
+
+## Performance Considerations
+
+- **Non-blocking**: History saves are asynchronous and don't block tool execution
+- **Efficient queries**: Dexie uses indexes (`toolId`, `timestamp`) for fast lookups
+- **Storage quota**: IndexedDB can typically store at least 50 MB per domain (varies by browser)
+- **Auto-cleanup**: Old entries are deleted automatically to prevent unbounded growth
+
+## Future Enhancements
+
+Planned improvements to the history system:
+
+1. **Export/import** — Download history as JSON, restore from backup
+2. **Search** — Full-text search across input/output content
+3. **Starred entries** — Pin important entries to the top
+4. **Sync** — Optional cloud sync (with explicit user opt-in)
+5. **Compression** — Compress large inputs/outputs to save space

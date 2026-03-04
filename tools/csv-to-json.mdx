@@ -1,0 +1,227 @@
+---
+title: CSV to JSON
+description: Convert CSV data to JSON format with automatic type detection
+---
+
+## Overview
+
+The CSV to JSON converter parses CSV (Comma-Separated Values) data into JSON arrays of objects. Features automatic header detection, type inference, and robust parsing that handles quoted fields, escaped characters, and edge cases.
+
+## Use Cases
+
+- **Data Import**: Import CSV exports from Excel, Google Sheets, or databases
+- **API Preparation**: Convert CSV datasets for JSON-based APIs
+- **Data Processing**: Transform tabular data for JavaScript/Python processing
+- **Configuration**: Convert CSV config files to JSON for applications
+- **Testing**: Generate JSON test fixtures from CSV data
+
+## Input Format
+
+Standard CSV with headers:
+
+```csv
+id,name,email,active
+1,Alice,alice@example.com,true
+2,Bob,bob@example.com,false
+3,Charlie,charlie@example.com,true
+```
+
+### With Quoted Fields
+
+```csv
+name,description,price
+"Laptop","High-performance laptop with 16GB RAM",999.99
+"Mouse","Wireless mouse, ergonomic design",24.99
+```
+
+### Tab-Delimited
+
+```tsv
+id	name	email
+1	Alice	alice@example.com
+2	Bob	bob@example.com
+```
+
+## Output Format
+
+JSON array of objects with type conversion:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "active": true
+  },
+  {
+    "id": 2,
+    "name": "Bob",
+    "email": "bob@example.com",
+    "active": false
+  },
+  {
+    "id": 3,
+    "name": "Charlie",
+    "email": "charlie@example.com",
+    "active": true
+  }
+]
+```
+
+## Examples
+
+<CodeGroup>
+```csv Input: Product Catalog
+sku,product,price,inStock
+LP-001,Laptop,999.99,true
+MS-002,Mouse,24.99,true
+KB-003,Keyboard,74.99,false
+```
+
+```json Output
+[
+  {
+    "sku": "LP-001",
+    "product": "Laptop",
+    "price": 999.99,
+    "inStock": true
+  },
+  {
+    "sku": "MS-002",
+    "product": "Mouse",
+    "price": 24.99,
+    "inStock": true
+  },
+  {
+    "sku": "KB-003",
+    "product": "Keyboard",
+    "price": 74.99,
+    "inStock": false
+  }
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```csv Input: With Quoted Fields
+name,description,tags
+"Project A","High priority, backend work","urgent,api,backend"
+"Project B","Frontend redesign","ui,frontend"
+```
+
+```json Output
+[
+  {
+    "name": "Project A",
+    "description": "High priority, backend work",
+    "tags": "urgent,api,backend"
+  },
+  {
+    "name": "Project B",
+    "description": "Frontend redesign",
+    "tags": "ui,frontend"
+  }
+]
+```
+</CodeGroup>
+
+<CodeGroup>
+```csv Input: Numeric Data
+user_id,score,level,timestamp
+1001,9500,15,1678901234
+1002,12300,18,1678901456
+1003,7800,12,1678901678
+```
+
+```json Output
+[
+  {
+    "user_id": 1001,
+    "score": 9500,
+    "level": 15,
+    "timestamp": 1678901234
+  },
+  {
+    "user_id": 1002,
+    "score": 12300,
+    "level": 18,
+    "timestamp": 1678901456
+  },
+  {
+    "user_id": 1003,
+    "score": 7800,
+    "level": 12,
+    "timestamp": 1678901678
+  }
+]
+```
+</CodeGroup>
+
+## Features
+
+- **Automatic Header Detection**: First row treated as column names
+- **Type Inference**: Automatically converts numbers, booleans, null
+- **Quoted Field Support**: Handles fields with commas, quotes, newlines
+- **Tab Support**: Detects and parses tab-delimited values
+- **Empty Line Handling**: Skips empty rows automatically
+- **Error Reporting**: Clear error messages for malformed CSV
+
+## Type Conversion Rules
+
+### Numbers
+```csv
+price
+99.99
+```
+Converts to: `{"price": 99.99}`
+
+### Booleans
+```csv
+active
+true
+false
+```
+Converts to: `{"active": true}`, `{"active": false}`
+
+### Null
+```csv
+value
+
+null
+NULL
+```
+Converts to: `{"value": null}`
+
+### Strings
+All other values remain strings, including:
+- Numbers with leading zeros: `"001"`
+- Dates: `"2024-01-15"`
+- Mixed content: `"abc123"`
+
+## Implementation Details
+
+From `lib/tools/engine.ts:606-617`:
+
+```typescript
+case 'csv-to-json': {
+  const { parse: csvParse } = await import('papaparse');
+  const parsed = csvParse<Record<string, unknown>>(input, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: true,
+  });
+  if (parsed.errors.length) {
+    return { output: `CSV parse error: ${parsed.errors[0].message}` };
+  }
+  return { output: stringify(parsed.data, true) };
+}
+```
+
+<Note>
+Uses `papaparse` with `dynamicTyping: true` for intelligent type conversion. Numbers, booleans, and null values are automatically detected and converted.
+</Note>
+
+<Tip>
+If type conversion causes issues (e.g., leading zeros being dropped), disable dynamic typing by using a CSV parser with `dynamicTyping: false` in your own code.
+</Tip>

@@ -1,0 +1,162 @@
+---
+title: SCSS Beautify/Minify
+description: Format or minify SCSS (Sass) stylesheets with indentation and whitespace control
+---
+
+# SCSS Beautify/Minify
+
+Format or minify SCSS (Sass) stylesheets. Beautify adds indentation for nested rules; minify removes comments and whitespace.
+
+## Overview
+
+The SCSS Beautify/Minify tool processes SCSS as CSS:
+- **Beautify** — Indents rules, properties, and nested selectors with 2 spaces
+- **Minify** — Removes comments, collapses whitespace, and strips unnecessary characters
+
+Supports SCSS syntax including nested rules, variables, mixins, and `@import`/`@use`.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Sass cleanup" icon="broom">
+    Format SCSS files for readability and team consistency
+  </Card>
+  <Card title="Build optimization" icon="gauge-high">
+    Minify SCSS before compilation to reduce intermediate file size
+  </Card>
+  <Card title="Migration" icon="arrows-rotate">
+    Reformat legacy Sass files with consistent indentation
+  </Card>
+  <Card title="Debugging" icon="bug">
+    Beautify minified SCSS from third-party libraries
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Indents rules, properties, and nested selectors with 2 spaces per level.
+    
+    **Input:**
+    ```scss
+    .header{$bg:#333;background:$bg;.nav{display:flex;}}
+    ```
+    
+    **Output:**
+    ```scss
+    .header {
+      $bg: #333;
+      background: $bg;
+      .nav {
+        display: flex;
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Minify">
+    Removes comments, collapses whitespace, and strips unnecessary characters.
+    
+    **Input:**
+    ```scss
+    /* Variables */
+    $color: #333;
+    .header {
+      background: $color;
+    }
+    ```
+    
+    **Output:**
+    ```scss
+    $color:#333;.header{background:$color}
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+The SCSS beautifier uses the same CSS beautification algorithm as the [CSS Beautify](/tools/css-beautify) tool. SCSS-specific syntax (variables `$var`, mixins `@mixin`, nesting, `@extend`) is treated as CSS syntax.
+
+**Source:** `lib/tools/engine.ts:525-528`
+
+```typescript Key logic
+case 'less-beautify':
+case 'scss-beautify': {
+  return { output: action === 'minify' ? minifyCss(input) : beautifyCss(input) };
+}
+```
+
+<Note>
+  The beautifier does **not** parse SCSS semantics (variable scope, mixin expansion, `@extend` resolution). It formats based on CSS structure only.
+</Note>
+
+## SCSS Feature Support
+
+<AccordionGroup>
+  <Accordion title="Variables">
+    ```scss
+    $primary: #007bff;
+    color: $primary;
+    ```
+    Variables are preserved and formatted as CSS properties.
+  </Accordion>
+  
+  <Accordion title="Nested rules">
+    ```scss
+    .header {
+      .nav {
+        display: flex;
+      }
+    }
+    ```
+    Nested rules are indented with 2 spaces per level.
+  </Accordion>
+  
+  <Accordion title="Mixins & includes">
+    ```scss
+    @mixin rounded($radius: 5px) {
+      border-radius: $radius;
+    }
+    .button {
+      @include rounded(10px);
+    }
+    ```
+    Mixins are formatted as rulesets. `@include` calls are treated as properties.
+  </Accordion>
+  
+  <Accordion title="Parent selectors (&)">
+    ```scss
+    .button {
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+    ```
+    Parent selector (`&`) is preserved and formatted correctly.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  For SCSS-aware formatting with semantic validation, use the Dart Sass compiler or a dedicated SCSS formatter like Prettier.
+</Warning>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="LESS Beautify/Minify" href="/tools/less-beautify" icon="paintbrush">
+    Format or minify LESS stylesheets
+  </Card>
+  <Card title="CSS Beautify/Minify" href="/tools/css-beautify" icon="paintbrush">
+    Format or minify vanilla CSS (same algorithm)
+  </Card>
+  <Card title="HTML Beautify/Minify" href="/tools/html-beautify" icon="code">
+    Format or minify HTML markup
+  </Card>
+</CardGroup>

@@ -1,0 +1,137 @@
+---
+title: ERB Beautify/Minify
+description: Format or minify ERB (Embedded Ruby) templates with HTML indentation
+---
+
+# ERB Beautify/Minify
+
+Format or minify ERB (Embedded Ruby) templates. Beautify adds indentation for HTML structure; minify collapses whitespace.
+
+## Overview
+
+The ERB Beautify/Minify tool processes ERB templates as HTML:
+- **Beautify** — Indents HTML tags and ERB blocks with 2 spaces
+- **Minify** — Removes comments, collapses whitespace, and strips spaces between tags
+
+ERB tags (`<% %>`, `<%= %>`) are preserved and treated as content nodes.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Rails view cleanup" icon="gem">
+    Format ERB templates from Rails projects for readability
+  </Card>
+  <Card title="Template optimization" icon="gauge-high">
+    Minify ERB templates for production to reduce view size
+  </Card>
+  <Card title="Code review" icon="code-compare">
+    Standardize ERB indentation for diffs and version control
+  </Card>
+  <Card title="Legacy migration" icon="arrows-rotate">
+    Reformat old ERB templates with consistent indentation
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Indents HTML tags and ERB blocks with 2 spaces. ERB tags are treated as inline content.
+    
+    **Input:**
+    ```erb
+    <div><h1><%= @title %></h1><p><%= @content %></p></div>
+    ```
+    
+    **Output:**
+    ```erb
+    <div>
+      <h1><%= @title %></h1>
+      <p><%= @content %></p>
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Minify">
+    Removes comments and collapses whitespace.
+    
+    **Input:**
+    ```erb
+    <div>
+      <!-- Comment -->
+      <h1><%= @title %></h1>
+      <p><%= @content %></p>
+    </div>
+    ```
+    
+    **Output:**
+    ```erb
+    <div><h1><%= @title %></h1><p><%= @content %></p></div>
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+The ERB beautifier uses the same HTML beautification algorithm as the [HTML Beautify](/tools/html-beautify) tool. ERB tags (`<% %>`, `<%= %>`, `<%# %>`) are treated as text content.
+
+**Source:** `lib/tools/engine.ts:530-533`
+
+```typescript Key logic
+case 'erb-beautify': {
+  if (action === 'minify') return { output: minifyHtml(input) };
+  return { output: beautifyHtml(input) };
+}
+```
+
+<Note>
+  The beautifier does **not** parse Ruby syntax inside ERB tags. Complex Ruby logic (multiline blocks, conditionals) may not indent perfectly.
+</Note>
+
+## ERB Tag Support
+
+<AccordionGroup>
+  <Accordion title="Output tags: <%= %>">
+    ```erb
+    <p><%= user.name %></p>
+    ```
+    Treated as inline content, no special indentation.
+  </Accordion>
+  
+  <Accordion title="Logic tags: <% %>">
+    ```erb
+    <% if user.admin? %>
+      <p>Admin panel</p>
+    <% end %>
+    ```
+    The beautifier indents based on HTML structure, not Ruby block depth.
+  </Accordion>
+  
+  <Accordion title="Comment tags: <%# %>">
+    ```erb
+    <%# This is an ERB comment %>
+    ```
+    Preserved during beautification, removed during minification.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  For Ruby-aware formatting, use a dedicated ERB formatter like `htmlbeautifier` (Ruby gem). This tool focuses on HTML structure.
+</Warning>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="HTML Beautify/Minify" href="/tools/html-beautify" icon="code">
+    Format or minify HTML markup (same algorithm)
+  </Card>
+  <Card title="HTML Preview" href="/tools/html-preview" icon="eye">
+    Render HTML safely in an iframe
+  </Card>
+</CardGroup>

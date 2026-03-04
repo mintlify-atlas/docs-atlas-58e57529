@@ -1,0 +1,198 @@
+---
+title: JSON to CSV
+description: Convert JSON arrays to CSV format with automatic flattening
+---
+
+## Overview
+
+The JSON to CSV converter transforms JSON arrays of objects into CSV (Comma-Separated Values) format. Automatically flattens nested objects and handles arrays, making it easy to export JSON data for spreadsheets, databases, and data analysis tools.
+
+## Use Cases
+
+- **Data Export**: Export API responses to CSV for Excel or Google Sheets
+- **Database Import**: Prepare JSON data for database bulk imports
+- **Data Analysis**: Convert JSON datasets for statistical analysis tools
+- **Reporting**: Transform structured data into tabular format for reports
+- **Data Migration**: Convert between JSON and CSV formats during migrations
+
+## Input Format
+
+Input must be a JSON array of objects:
+
+```json
+[
+  {"id": 1, "name": "Alice", "email": "alice@example.com"},
+  {"id": 2, "name": "Bob", "email": "bob@example.com"},
+  {"id": 3, "name": "Charlie", "email": "charlie@example.com"}
+]
+```
+
+### With Nested Objects
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "address": {
+      "city": "New York",
+      "state": "NY"
+    }
+  },
+  {
+    "id": 2,
+    "name": "Bob",
+    "address": {
+      "city": "Los Angeles",
+      "state": "CA"
+    }
+  }
+]
+```
+
+## Output Format
+
+Standard CSV with headers:
+
+```csv
+id,name,email
+1,Alice,alice@example.com
+2,Bob,bob@example.com
+3,Charlie,charlie@example.com
+```
+
+### Flattened Nested Objects
+
+```csv
+id,name,address.city,address.state
+1,Alice,New York,NY
+2,Bob,Los Angeles,CA
+```
+
+## Examples
+
+<CodeGroup>
+```json Input: Simple Array
+[
+  {"product": "Laptop", "price": 999, "stock": 15},
+  {"product": "Mouse", "price": 25, "stock": 150},
+  {"product": "Keyboard", "price": 75, "stock": 80}
+]
+```
+
+```csv Output
+product,price,stock
+Laptop,999,15
+Mouse,25,150
+Keyboard,75,80
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Nested Objects
+[
+  {
+    "user": "alice",
+    "stats": {
+      "logins": 42,
+      "posts": 15
+    }
+  },
+  {
+    "user": "bob",
+    "stats": {
+      "logins": 28,
+      "posts": 7
+    }
+  }
+]
+```
+
+```csv Output
+user,stats.logins,stats.posts
+alice,42,15
+bob,28,7
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Arrays in Values
+[
+  {
+    "name": "Project A",
+    "tags": ["urgent", "backend", "api"]
+  },
+  {
+    "name": "Project B",
+    "tags": ["frontend", "ui"]
+  }
+]
+```
+
+```csv Output
+name,tags
+Project A,"urgent|backend|api"
+Project B,"frontend|ui"
+```
+</CodeGroup>
+
+## Features
+
+- **Automatic Flattening**: Nested objects become dot-notation columns (e.g., `address.city`)
+- **Array Handling**: Arrays are joined with pipe delimiters (`value1|value2|value3`)
+- **Type Preservation**: Numbers and booleans are preserved in output
+- **Empty Values**: Null/undefined values become empty CSV cells
+- **Header Generation**: Column headers automatically extracted from object keys
+- **Proper Escaping**: Values with commas, quotes, or newlines are properly escaped
+
+## Limitations
+
+<Warning>
+- Input **must** be an array of objects. Single objects, primitives, or deeply nested arrays are not supported.
+- All items must be plain objects (not primitives or nested arrays).
+- Arrays within values are flattened to pipe-delimited strings.
+</Warning>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:594-604`:
+
+```typescript
+case 'json-to-csv': {
+  const parsed = parseJsonLoose(input);
+  if (!Array.isArray(parsed)) return { output: 'Input must be a JSON array of objects.' };
+  if (parsed.length === 0) return { output: '' };
+  if (parsed.some((item) => item === null || typeof item !== 'object' || Array.isArray(item))) {
+    return { output: 'Each item in the array must be a plain object (not a primitive or nested array).' };
+  }
+  const rows = parsed.map((item) => flattenRecord(item as Record<string, unknown>));
+  const { unparse: csvUnparse } = await import('papaparse');
+  return { output: csvUnparse(rows) };
+}
+```
+
+The flattening logic from `lib/tools/engine.ts:146-158`:
+
+```typescript
+function flattenRecord(input: Record<string, unknown>, prefix = '', out: Record<string, unknown> = {}) {
+  for (const [key, value] of Object.entries(input)) {
+    const composed = prefix ? `${prefix}.${key}` : key;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      flattenRecord(value as Record<string, unknown>, composed, out);
+    } else if (Array.isArray(value)) {
+      out[composed] = value.join('|');
+    } else {
+      out[composed] = value ?? '';
+    }
+  }
+  return out;
+}
+```
+
+<Note>
+Uses the `papaparse` library for RFC 4180-compliant CSV generation, ensuring proper handling of edge cases like embedded commas and quotes.
+</Note>
+
+<Tip>
+For complex nested structures, consider pre-processing your JSON to flatten or restructure data before conversion.
+</Tip>

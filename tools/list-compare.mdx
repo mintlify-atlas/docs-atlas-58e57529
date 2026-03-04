@@ -1,0 +1,332 @@
+---
+title: List Compare
+description: Compare two lists to find intersections, differences, and set operations
+---
+
+## Overview
+
+The List Compare tool performs set operations on two lists, finding their intersection, union, and differences. Includes automatic delimiter detection, case-insensitive comparison, optional fuzzy matching, and detailed statistics including Jaccard similarity index.
+
+## Use Cases
+
+- **Data Reconciliation**: Compare datasets to find matching and missing records
+- **Venn Diagrams**: Generate set operation results for visualization
+- **Duplicate Detection**: Find common items across two sources
+- **Data Cleanup**: Identify unique items in each list
+- **A/B Testing**: Compare user cohorts or feature sets
+- **Inventory Management**: Compare stock lists to find discrepancies
+
+## Input Format
+
+### List A (Primary Input)
+```
+apple
+banana
+cherry
+date
+elderberry
+```
+
+### List B (Second Input)
+```
+banana
+cherry
+fig
+grape
+```
+
+### Alternative Delimiters
+Comma-separated:
+```
+apple, banana, cherry, date
+```
+
+Tab-separated:
+```
+apple	banana	cherry	date
+```
+
+Semicolon-separated:
+```
+apple; banana; cherry; date
+```
+
+## Operations
+
+### Intersection (default)
+Items present in both lists:
+```
+banana
+cherry
+```
+
+### Only in A
+Items only in List A:
+```
+apple
+date
+elderberry
+```
+
+### Only in B
+Items only in List B:
+```
+fig
+grape
+```
+
+### Union
+All unique items from both lists (sorted):
+```
+apple
+banana
+cherry
+date
+elderberry
+fig
+grape
+```
+
+### Statistics
+Detailed comparison metrics:
+```
+List A:        5 unique items
+List B:        4 unique items
+Intersection:  2 items
+Only in A:     3 items
+Only in B:     2 items
+Union:         7 items
+Jaccard Index: 28.6%
+```
+
+## Output Format
+
+Results vary by operation selected:
+
+**Intersection**: One item per line, sorted alphabetically
+
+**Only in A / Only in B**: Unique items from that list, sorted
+
+**Union**: All unique items combined, sorted
+
+**Statistics**: Detailed breakdown with Jaccard similarity
+
+Metadata line:
+```
+A: 5 | B: 4 | Intersection: 2 | Jaccard: 28.6%
+```
+
+## Examples
+
+<CodeGroup>
+```text List A: Intersection
+apple
+banana
+cherry
+date
+elderberry
+```
+
+```text List B
+banana
+cherry
+fig
+grape
+kiwi
+```
+
+```text Output (Intersection)
+banana
+cherry
+
+Meta: A: 5 | B: 5 | Intersection: 2 | Jaccard: 25.0%
+```
+</CodeGroup>
+
+<CodeGroup>
+```text List A: Only in A
+user001
+user002
+user003
+user004
+user005
+```
+
+```text List B
+user003
+user004
+user006
+user007
+```
+
+```text Output (Only in A)
+user001
+user002
+user005
+
+Meta: A: 5 | B: 4 | Intersection: 2 | Jaccard: 28.6%
+```
+</CodeGroup>
+
+<CodeGroup>
+```text List A: Union
+red
+green
+blue
+```
+
+```text List B
+blue
+yellow
+magenta
+```
+
+```text Output (Union)
+blue
+green
+magenta
+red
+yellow
+
+Meta: A: 3 | B: 3 | Intersection: 1 | Jaccard: 20.0%
+```
+</CodeGroup>
+
+<CodeGroup>
+```text List A: Case Insensitive
+Apple
+BANANA
+Cherry
+```
+
+```text List B
+apple
+banana
+DATE
+```
+
+```text Output (Intersection)
+Apple
+BANANA
+
+Meta: A: 3 | B: 3 | Intersection: 2 | Jaccard: 50.0%
+```
+</CodeGroup>
+
+<CodeGroup>
+```text List A: Comma-Separated
+alpha, beta, gamma, delta
+```
+
+```text List B
+beta, gamma, epsilon, zeta
+```
+
+```text Output (Intersection)
+beta
+gamma
+
+Meta: A: 4 | B: 4 | Intersection: 2 | Jaccard: 33.3%
+```
+</CodeGroup>
+
+## Features
+
+- **Auto Delimiter Detection**: Detects newline, comma, semicolon, or tab
+- **Case Insensitive**: Comparisons ignore case, preserves first-seen casing
+- **Deduplication**: Automatic removal of duplicates within each list
+- **Fuzzy Matching**: Optional Levenshtein distance matching (disabled by default)
+- **Jaccard Index**: Similarity coefficient (intersection / union)
+- **Sorted Output**: Results alphabetically sorted
+- **Trimming**: Automatic whitespace trimming
+
+## Jaccard Similarity Index
+
+The Jaccard Index measures list similarity:
+
+```
+J(A, B) = |A ∩ B| / |A ∪ B|
+```
+
+- **1.0 (100%)**: Lists are identical
+- **0.5 (50%)**: Half the union is shared
+- **0.0 (0%)**: Lists have no common items
+
+Example:
+- A = {1, 2, 3}, B = {2, 3, 4}
+- Intersection = {2, 3} (2 items)
+- Union = {1, 2, 3, 4} (4 items)
+- Jaccard = 2/4 = 0.5 (50%)
+
+## Implementation Details
+
+From `lib/tools/list-compare.ts:133-169`:
+
+```typescript
+export function runListCompare(
+  inputA: string, inputB: string, action: string
+): { output: string; meta: string } {
+  const listA = splitItems(inputA);
+  const listB = splitItems(inputB);
+  const result = compareLists(listA, listB, { 
+    caseSensitive: false, 
+    fuzzyMatch: false, 
+    fuzzyDistance: 2 
+  });
+
+  let output: string;
+  switch (action) {
+    case 'only-a': output = result.onlyA.join('\n'); break;
+    case 'only-b': output = result.onlyB.join('\n'); break;
+    case 'union': output = result.union.join('\n'); break;
+    case 'stats': output = formatStats(result.stats); break;
+    default: output = result.intersection.join('\n'); break;
+  }
+
+  const meta = `A: ${result.stats.sizeA} | B: ${result.stats.sizeB} | Intersection: ${result.stats.intersection} | Jaccard: ${(result.stats.jaccard * 100).toFixed(1)}%`;
+  return { output, meta };
+}
+```
+
+**Delimiter Detection** (`lib/tools/list-compare.ts:45-53`):
+```typescript
+function detectDelimiter(raw: string): 'newline' | 'comma' | 'semicolon' | 'tab' {
+  const counts = {
+    newline: (raw.match(/\n/g) ?? []).length,
+    comma: (raw.match(/,/g) ?? []).length,
+    semicolon: (raw.match(/;/g) ?? []).length,
+    tab: (raw.match(/\t/g) ?? []).length,
+  };
+  return (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] as 'newline') || 'newline';
+}
+```
+
+**Fuzzy Matching** (`lib/tools/list-compare.ts:30-43`):
+```typescript
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix: number[][] = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      const cost = a[j - 1] === b[i - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+    }
+  }
+  return matrix[b.length][a.length];
+}
+```
+
+<Note>
+The List Compare tool was extracted from Vennom and adapted for Kayston's Forge. It uses case-preserving deduplication (first-seen casing is retained in output).
+</Note>
+
+<Tip>
+Fuzzy matching is disabled by default because it's computationally expensive. For lists larger than 5,000 items, fuzzy matching is automatically skipped to prevent UI thread lockup.
+</Tip>
+
+<Warning>
+Very large lists (over 100K items) may cause performance issues. Consider splitting into smaller batches or using external tools for massive dataset comparisons.
+</Warning>

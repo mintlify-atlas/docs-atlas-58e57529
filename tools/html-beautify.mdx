@@ -1,0 +1,170 @@
+---
+title: HTML Beautify/Minify
+description: Format or minify HTML with proper indentation and whitespace control
+---
+
+# HTML Beautify/Minify
+
+Format or minify HTML markup. Beautify adds indentation for readability; minify removes whitespace to reduce file size.
+
+## Overview
+
+The HTML Beautify/Minify tool processes HTML with two modes:
+- **Beautify** — Adds indentation, line breaks, and proper nesting
+- **Minify** — Removes comments, collapses whitespace, and strips unnecessary characters
+
+Handles self-closing tags, void elements, and nested structures.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Code readability" icon="eye">
+    Format minified or machine-generated HTML for easier reading and editing
+  </Card>
+  <Card title="Production optimization" icon="gauge-high">
+    Minify HTML to reduce page size and improve load times
+  </Card>
+  <Card title="Code review" icon="code-compare">
+    Standardize indentation for diffs and version control
+  </Card>
+  <Card title="Template cleanup" icon="broom">
+    Clean up HTML from WYSIWYG editors or CMS exports
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Adds indentation (2 spaces per level) and line breaks. Respects void elements like `<br>`, `<img>`, `<input>`.
+    
+    **Input:**
+    ```html
+    <div><h1>Title</h1><p>Content</p></div>
+    ```
+    
+    **Output:**
+    ```html
+    <div>
+      <h1>Title</h1>
+      <p>Content</p>
+    </div>
+    ```
+  </Tab>
+  
+  <Tab title="Minify">
+    Removes comments, collapses whitespace, and strips spaces between tags.
+    
+    **Input:**
+    ```html
+    <div>
+      <!-- Comment -->
+      <h1>Title</h1>
+      <p>Content</p>
+    </div>
+    ```
+    
+    **Output:**
+    ```html
+    <div><h1>Title</h1><p>Content</p></div>
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+### Beautify Algorithm
+
+1. Split HTML into tokens at tag boundaries
+2. Track indentation level with a counter
+3. Indent closing tags, self-closing tags, and opening tags
+4. Increase indentation after opening tags (unless self-closing or void)
+5. Decrease indentation before closing tags
+
+**Source:** `lib/tools/engine.ts:183-220`
+
+```typescript Key logic
+function beautifyHtml(html: string): string {
+  const result: string[] = [];
+  let indent = 0;
+  const voidElements = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  const tokens = html.replace(/>\s*</g, '>\n<').split('\n');
+
+  for (const token of tokens) {
+    const trimmed = token.trim();
+    if (!trimmed) continue;
+
+    if (/^<\//.test(trimmed)) {
+      indent = Math.max(0, indent - 1);
+      result.push('  '.repeat(indent) + trimmed);
+    } else if (/\/>$/.test(trimmed) || voidElements.has((trimmed.match(/^<(\w+)/)?.[1] || '').toLowerCase())) {
+      result.push('  '.repeat(indent) + trimmed);
+    } else if (/^<\w/.test(trimmed)) {
+      result.push('  '.repeat(indent) + trimmed);
+      const tagName = (trimmed.match(/^<(\w+)/)?.[1] || '').toLowerCase();
+      if (tagName && !new RegExp(`</${tagName}>\\s*$`, 'i').test(trimmed)) {
+        indent++;
+      }
+    } else {
+      result.push('  '.repeat(indent) + trimmed);
+    }
+  }
+  return result.join('\n');
+}
+```
+
+### Minify Algorithm
+
+1. Remove HTML comments (`<!-- ... -->`)
+2. Collapse consecutive whitespace to single spaces
+3. Remove spaces between tags (`> <` → `><`)
+4. Strip leading/trailing whitespace
+
+**Source:** `lib/tools/engine.ts:222-231`
+
+```typescript Key logic
+function minifyHtml(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')    // Remove comments
+    .replace(/\s+/g, ' ')               // Collapse whitespace
+    .replace(/>\s+</g, '><')            // Remove space between tags
+    .replace(/\s+>/g, '>')              // Remove space before >
+    .replace(/<\s+/g, '<')              // Remove space after <
+    .trim();
+}
+```
+
+<Warning>
+  The beautifier uses basic regex-based parsing. Complex scenarios (inline JavaScript, `<pre>` blocks, or nested CDATA) may not format perfectly.
+</Warning>
+
+## Void Elements
+
+The tool recognizes these HTML5 void elements (no closing tag required):
+- `<area>`, `<base>`, `<br>`, `<col>`, `<embed>`, `<hr>`, `<img>`, `<input>`
+- `<link>`, `<meta>`, `<param>`, `<source>`, `<track>`, `<wbr>`
+
+These are never indented as parent containers.
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="CSS Beautify/Minify" href="/tools/css-beautify" icon="paintbrush">
+    Format or minify CSS stylesheets
+  </Card>
+  <Card title="JS Beautify/Minify" href="/tools/js-beautify" icon="flask">
+    Format or minify JavaScript/TypeScript
+  </Card>
+  <Card title="HTML Preview" href="/tools/html-preview" icon="eye">
+    Render HTML safely in an iframe
+  </Card>
+  <Card title="HTML to JSX" href="/tools/html-to-jsx" icon="code">
+    Convert HTML to React JSX
+  </Card>
+</CardGroup>

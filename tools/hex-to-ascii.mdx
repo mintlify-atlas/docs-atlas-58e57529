@@ -1,0 +1,134 @@
+---
+title: Hex to ASCII
+description: Convert hexadecimal bytes to ASCII text with UTF-8 decoding
+---
+
+# Hex to ASCII
+
+Convert hexadecimal byte sequences to human-readable ASCII text. Supports space-separated, comma-separated, or `0x` prefixed hex values.
+
+## Overview
+
+The Hex to ASCII tool decodes hex bytes to UTF-8 text. Input can be formatted with:
+- Space-separated: `48 65 6c 6c 6f`
+- Comma-separated: `48,65,6c,6c,6f`
+- `0x` prefix: `0x48 0x65 0x6c 0x6c 0x6f`
+- Continuous: `48656c6c6f`
+
+Single-character hex values (e.g., `a`) are automatically padded to `0a`.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Binary data inspection" icon="microscope">
+    Decode hex dumps from network packets, memory dumps, or binary files
+  </Card>
+  <Card title="Protocol debugging" icon="bug">
+    Convert hex-encoded payloads to readable strings
+  </Card>
+  <Card title="Reverse engineering" icon="screwdriver-wrench">
+    Decode embedded strings from hex representations
+  </Card>
+  <Card title="Cryptographic analysis" icon="key">
+    Inspect hex-encoded hashes, keys, or ciphertexts
+  </Card>
+</CardGroup>
+
+## Input Format
+
+Paste hex bytes in any of these formats:
+
+```text Example: Space-separated
+48 65 6c 6c 6f 20 57 6f 72 6c 64
+```
+
+```text Example: 0x prefix
+0x48 0x65 0x6c 0x6c 0x6f
+```
+
+```text Example: Continuous
+48656c6c6f
+```
+
+The tool automatically strips whitespace, commas, and `0x` prefixes.
+
+## Output
+
+Decoded UTF-8 text with byte count metadata.
+
+<Accordion title="Example output">
+  **Input:**
+  ```text
+  48 65 6c 6c 6f 20 57 6f 72 6c 64
+  ```
+  
+  **Output:**
+  ```text
+  Hello World
+  ```
+  
+  **Meta:**
+  ```text
+  11 bytes
+  ```
+</Accordion>
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Invalid hex digits">
+    Non-hex characters (except whitespace, commas, and `0x`) produce an error:
+    ```
+    Invalid hex byte: "zz"
+    ```
+  </Accordion>
+  
+  <Accordion title="Incomplete bytes">
+    Single-character tokens are automatically padded (e.g., `a` → `0a`). No error is raised.
+  </Accordion>
+  
+  <Accordion title="Invalid UTF-8">
+    Byte sequences that don't form valid UTF-8 may produce replacement characters (`\uFFFD`) or decoding errors.
+  </Accordion>
+</AccordionGroup>
+
+## Implementation Details
+
+The tool tokenizes the input by whitespace, removes `0x` prefixes, pads single-digit hex values, and decodes each byte with `TextDecoder` (UTF-8).
+
+**Source:** `lib/tools/engine.ts:946-960`
+
+```typescript Key logic
+const cleaned = input.trim().replace(/0x/gi, '').replace(/[,\s]+/g, ' ');
+const tokens = cleaned.split(' ').filter(Boolean);
+const byteVals = tokens.map((t) => {
+  const normalized = t.length === 1 ? '0' + t : t;
+  if (!/^[0-9a-fA-F]{2}$/.test(normalized)) throw new Error(`Invalid hex byte: "${t}"`);
+  return parseInt(normalized, 16);
+});
+return new TextDecoder().decode(new Uint8Array(byteVals));
+```
+
+<Tip>
+  For encoding ASCII to hex, use the [ASCII to Hex](/tools/ascii-to-hex) tool.
+</Tip>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Convert hex to ASCII
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="ASCII to Hex" href="/tools/ascii-to-hex" icon="arrow-right-arrow-left">
+    Reverse operation: convert ASCII text to hex bytes
+  </Card>
+  <Card title="Base64 String Encode/Decode" href="/tools/base64-string" icon="hashtag">
+    Encode/decode Base64 strings
+  </Card>
+  <Card title="Number Base Converter" href="/tools/number-base" icon="calculator">
+    Convert between binary, octal, decimal, and hex
+  </Card>
+</CardGroup>

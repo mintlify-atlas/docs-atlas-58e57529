@@ -1,0 +1,388 @@
+---
+title: JSON to YAML
+description: Convert JSON documents to YAML format with customizable formatting options
+---
+
+The **JSON to YAML** tool converts JSON (JavaScript Object Notation) into YAML (YAML Ain't Markup Language) format. YAML is more human-readable and widely used for configuration files, making this tool essential for creating configs from JSON data.
+
+## Use Cases
+
+- **Generating configuration files** from JSON API responses
+- **Converting JSON to YAML** for Kubernetes, Docker Compose, Ansible
+- **Creating CI/CD config files** (GitHub Actions, GitLab CI, CircleCI)
+- **Improving readability** of complex JSON structures
+- **Converting OpenAPI specs** from JSON to YAML format
+- **Migrating configs** from JSON-based systems to YAML-based systems
+
+## How It Works
+
+The tool uses the **`js-yaml` library** to serialize JavaScript objects (parsed from JSON) into YAML format:
+
+1. **Parse JSON** (with relaxed syntax support via `parseJsonLoose`)
+2. **Convert to YAML** using `yamlDump()` with formatting options:
+   - 2-space indentation
+   - 120-character line width for readability
+3. **Output YAML** string
+
+<Note>
+  The tool uses a **relaxed JSON parser** that accepts unquoted keys, single quotes, and trailing commas, making it forgiving for hand-written JSON.
+</Note>
+
+## Input Format
+
+Any valid JSON (or relaxed JSON):
+
+```json
+{
+  "name": "MyApp",
+  "version": "1.2.3",
+  "config": {
+    "debug": true,
+    "port": 8080,
+    "features": ["auth", "api", "admin"]
+  }
+}
+```
+
+## Output Format
+
+```yaml
+name: MyApp
+version: 1.2.3
+config:
+  debug: true
+  port: 8080
+  features:
+    - auth
+    - api
+    - admin
+```
+
+## Examples
+
+<CodeGroup>
+
+```json Simple Object
+Input:
+{
+  "app": {
+    "name": "MyService",
+    "env": "production",
+    "debug": false
+  }
+}
+
+Output:
+app:
+  name: MyService
+  env: production
+  debug: false
+```
+
+```json Docker Compose Config
+Input:
+{
+  "version": "3.8",
+  "services": {
+    "web": {
+      "image": "nginx:latest",
+      "ports": ["80:80"],
+      "environment": {
+        "NODE_ENV": "production"
+      }
+    },
+    "db": {
+      "image": "postgres:14",
+      "environment": {
+        "POSTGRES_PASSWORD": "secret"
+      }
+    }
+  }
+}
+
+Output:
+version: '3.8'
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - '80:80'
+    environment:
+      NODE_ENV: production
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_PASSWORD: secret
+```
+
+```json Kubernetes Deployment
+Input:
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "nginx-deployment",
+    "labels": {
+      "app": "nginx"
+    }
+  },
+  "spec": {
+    "replicas": 3,
+    "selector": {
+      "matchLabels": {
+        "app": "nginx"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {"app": "nginx"}
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "nginx",
+            "image": "nginx:1.14.2",
+            "ports": [{"containerPort": 80}]
+          }
+        ]
+      }
+    }
+  }
+}
+
+Output:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          ports:
+            - containerPort: 80
+```
+
+```json GitHub Actions Workflow
+Input:
+{
+  "name": "CI",
+  "on": {
+    "push": {"branches": ["main"]},
+    "pull_request": {"branches": ["main"]}
+  },
+  "jobs": {
+    "test": {
+      "runs-on": "ubuntu-latest",
+      "steps": [
+        {"uses": "actions/checkout@v3"},
+        {"name": "Setup Node", "uses": "actions/setup-node@v3", "with": {"node-version": "18"}},
+        {"name": "Install", "run": "npm ci"},
+        {"name": "Test", "run": "npm test"}
+      ]
+    }
+  }
+}
+
+Output:
+name: CI
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install
+        run: npm ci
+      - name: Test
+        run: npm test
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:503-504`
+</Info>
+
+The tool uses **`js-yaml`** (YAML 1.2 serializer):
+
+```typescript
+import { dump as yamlDump } from 'js-yaml';
+
+const parsed = parseJsonLoose(input);
+return { output: yamlDump(parsed, { indent: 2, lineWidth: 120 }) };
+```
+
+### Formatting Options
+
+- **Indentation:** 2 spaces (standard for YAML)
+- **Line width:** 120 characters (wraps long strings)
+- **Flow level:** Auto (uses block style for nested structures)
+
+### Type Conversion
+
+| JSON | YAML |
+|------|------|
+| `true`, `false` | `true`, `false` |
+| `123`, `123.45` | `123`, `123.45` |
+| `null` | `null` or `~` |
+| `"string"` | `string` (unquoted) or `'string'` (quoted if needed) |
+| `[1, 2, 3]` | `- 1\n- 2\n- 3` (block style) |
+| `{"key": "value"}` | `key: value` (block style) |
+
+<Note>
+  YAML automatically quotes strings that contain special characters (`:`, `#`, `!`, etc.) or reserved words (`true`, `false`, `null`, `yes`, `no`, `on`, `off`).
+</Note>
+
+## YAML Output Features
+
+### Unquoted Strings (Default)
+
+Simple strings are unquoted:
+
+```yaml
+name: MyApp
+description: A simple application
+```
+
+### Quoted Strings (When Needed)
+
+Strings with special characters are automatically quoted:
+
+```yaml
+message: 'Hello: World'  # Colon requires quotes
+version: '1.2.3'         # Numeric-looking strings are quoted
+```
+
+### Block Style Arrays
+
+Arrays use dash notation:
+
+```yaml
+features:
+  - auth
+  - api
+  - admin
+```
+
+### Flow Style (Inline)
+
+Short arrays/objects may use flow style:
+
+```yaml
+ports: ['80:80', '443:443']
+env: {NODE_ENV: production, DEBUG: false}
+```
+
+### Multi-line Strings
+
+Long strings (>120 chars) are wrapped:
+
+```yaml
+description: >
+  This is a very long description that exceeds 120 characters and will be
+  automatically wrapped by the YAML serializer for better readability.
+```
+
+## Relaxed JSON Parser
+
+The tool accepts non-standard JSON syntax:
+
+```javascript
+// ✅ Accepted (will convert to YAML)
+{name: "John", age: 30}        // Unquoted keys
+{name: 'John', age: 30}        // Single quotes
+{name: "John", age: 30,}       // Trailing comma
+```
+
+## Common Patterns
+
+### API Response to Config File
+
+1. **Fetch JSON from API:**
+
+```json
+{"config": {"host": "api.example.com", "timeout": 30}}
+```
+
+2. **Convert to YAML for deployment:**
+
+```yaml
+config:
+  host: api.example.com
+  timeout: 30
+```
+
+### Terraform Variables (JSON → YAML)
+
+```json
+{"environment": "prod", "instance_type": "t3.medium", "count": 3}
+```
+
+→
+
+```yaml
+environment: prod
+instance_type: t3.medium
+count: 3
+```
+
+### OpenAPI Spec Conversion
+
+Convert OpenAPI JSON specs to the more common YAML format for better readability:
+
+```json
+{"openapi": "3.0.0", "info": {"title": "My API", "version": "1.0.0"}}
+```
+
+→
+
+```yaml
+openapi: 3.0.0
+info:
+  title: My API
+  version: 1.0.0
+```
+
+## Limitations
+
+<Accordion title="Why are numbers quoted in output?">
+  YAML quotes numeric-looking strings to preserve their type. For example, version numbers like `"1.2.3"` become `'1.2.3'` to avoid interpretation as a number. This is correct behavior.
+</Accordion>
+
+<Accordion title="Can I preserve JSON comments?">
+  No. JSON does not officially support comments (though JSONC does). When you convert JSON to YAML, any comments in the source are lost. Add comments manually to the YAML output if needed.
+</Accordion>
+
+<Accordion title="Why does 'on' get quoted as 'on'?">
+  `on`, `off`, `yes`, `no`, `true`, `false` are YAML reserved words. When used as keys, they are quoted to prevent misinterpretation as booleans.
+</Accordion>
+
+## Related Tools
+
+- [YAML to JSON](/tools/yaml-to-json) - Reverse conversion (YAML → JSON)
+- [JSON Format/Validate](/tools/json-format-validate) - Validate and format JSON
+- [JSON to CSV](/tools/json-to-csv) - Convert JSON arrays to CSV

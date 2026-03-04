@@ -1,0 +1,205 @@
+---
+title: Unix Time Converter
+description: Convert between Unix timestamps and human-readable dates with support for seconds, milliseconds, and relative time formatting
+---
+
+The Unix Time Converter tool handles bidirectional conversion between Unix timestamps (epoch time) and human-readable date formats. It automatically detects the input format and provides comprehensive output including local time, UTC, ISO 8601, relative time, and both second and millisecond precision timestamps.
+
+## Features
+
+- Automatic detection of timestamp format (seconds vs milliseconds)
+- Bidirectional conversion (timestamp to date and date to timestamp)
+- Multiple output formats: Local, UTC, ISO 8601, relative time
+- Support for natural language date input
+- Real-time relative time calculation
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="API Debugging" icon="bug">
+    Decode timestamp fields from API responses to understand when events occurred
+  </Card>
+  <Card title="Log Analysis" icon="file-lines">
+    Convert epoch timestamps in server logs to human-readable dates
+  </Card>
+  <Card title="Database Queries" icon="database">
+    Generate Unix timestamps for date range queries in SQL or NoSQL databases
+  </Card>
+  <Card title="Scheduling" icon="calendar">
+    Calculate future timestamps for scheduled tasks or expiration times
+  </Card>
+</CardGroup>
+
+## Input Formats
+
+### Unix Timestamp (Seconds)
+
+Standard 10-digit Unix timestamp representing seconds since January 1, 1970 UTC:
+
+```
+1704067200
+```
+
+### Unix Timestamp (Milliseconds)
+
+JavaScript-style 13-digit timestamp with millisecond precision:
+
+```
+1704067200000
+```
+
+### ISO Date String
+
+ISO 8601 formatted date string:
+
+```
+2024-01-01T00:00:00.000Z
+```
+
+### Human-Readable Date
+
+Natural language date formats parsed by JavaScript Date constructor:
+
+```
+January 1, 2024
+2024-01-01
+Jan 1, 2024 12:00 PM
+```
+
+## Output Format
+
+The tool provides comprehensive output with all common date representations:
+
+```
+Local: 12/31/2023, 4:00:00 PM
+UTC: Sun, 31 Dec 2023 00:00:00 GMT
+ISO: 2024-01-01T00:00:00.000Z
+Relative: 3 months ago
+Unix Seconds: 1704067200
+Unix Milliseconds: 1704067200000
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Timestamp to Date">
+    Convert a Unix timestamp to human-readable formats.
+
+    **Input:**
+    ```
+    1704067200
+    ```
+
+    **Output:**
+    ```
+    Local: 1/1/2024, 12:00:00 AM
+    UTC: Mon, 01 Jan 2024 00:00:00 GMT
+    ISO: 2024-01-01T00:00:00.000Z
+    Relative: 2 months ago
+    Unix Seconds: 1704067200
+    Unix Milliseconds: 1704067200000
+    ```
+  </Tab>
+
+  <Tab title="Date to Timestamp">
+    Convert a human-readable date to Unix timestamp.
+
+    **Input:**
+    ```
+    2024-06-15T14:30:00Z
+    ```
+
+    **Output:**
+    ```
+    Local: 6/15/2024, 2:30:00 PM
+    UTC: Sat, 15 Jun 2024 14:30:00 GMT
+    ISO: 2024-06-15T14:30:00.000Z
+    Relative: in 3 months
+    Unix Seconds: 1718461800
+    Unix Milliseconds: 1718461800000
+    ```
+  </Tab>
+
+  <Tab title="Milliseconds">
+    Handle JavaScript-style millisecond timestamps.
+
+    **Input:**
+    ```
+    1704067200000
+    ```
+
+    **Output:**
+    ```
+    Local: 1/1/2024, 12:00:00 AM
+    UTC: Mon, 01 Jan 2024 00:00:00 GMT
+    ISO: 2024-01-01T00:00:00.000Z
+    Relative: 2 months ago
+    Unix Seconds: 1704067200
+    Unix Milliseconds: 1704067200000
+    ```
+
+    <Note>
+      The tool automatically detects whether the input is in seconds (10 digits) or milliseconds (13 digits).
+    </Note>
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+The converter uses the following logic from the engine:
+
+- **Auto-detection**: Timestamps with more than 10 digits are treated as milliseconds
+- **Relative time**: Calculated using `Intl.RelativeTimeFormat` for internationalized output
+- **Date parsing**: Falls back to JavaScript Date constructor for flexible input parsing
+
+### Source Reference
+
+Implementation location: `lib/tools/engine.ts:355-383`
+
+```typescript
+case 'unix-time-converter': {
+  const ts = detectTimestamp(input);
+  if (ts === null) {
+    const date = new Date(input);
+    if (Number.isNaN(date.getTime())) 
+      return { output: 'Invalid timestamp or date input.' };
+    return {
+      output: [
+        `Local: ${date.toLocaleString()}`,
+        `UTC: ${date.toUTCString()}`,
+        `ISO: ${date.toISOString()}`,
+        `Relative: ${relativeTime(date.getTime())}`,
+        `Unix Seconds: ${Math.floor(date.getTime() / 1000)}`,
+        `Unix Milliseconds: ${date.getTime()}`,
+      ].join('\n'),
+    };
+  }
+  // ... timestamp conversion logic
+}
+```
+
+## Common Patterns
+
+### Current Timestamp
+
+To get the current Unix timestamp, use JavaScript:
+
+```javascript
+Math.floor(Date.now() / 1000)  // seconds
+Date.now()                      // milliseconds
+```
+
+### Adding Time Intervals
+
+Calculate future timestamps:
+
+```javascript
+// Add 7 days to current timestamp
+const futureTs = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+```
+
+### Time Zone Handling
+
+<Warning>
+  Unix timestamps are always in UTC. The "Local" output reflects your browser's time zone, but the underlying timestamp value is timezone-agnostic.
+</Warning>

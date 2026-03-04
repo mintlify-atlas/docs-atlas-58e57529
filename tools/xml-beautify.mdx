@@ -1,0 +1,173 @@
+---
+title: XML Beautify/Minify
+description: Format, minify, and validate XML with proper indentation and whitespace control
+---
+
+# XML Beautify/Minify
+
+Format, minify, and validate XML documents. Beautify adds indentation; minify collapses whitespace; validation checks well-formedness.
+
+## Overview
+
+The XML Beautify/Minify tool provides:
+- **Beautify** — Indents tags with 2 spaces using `xml-formatter`
+- **Minify** — Removes whitespace between tags
+- **Validation** — Parses XML with `fast-xml-parser` to detect errors
+
+Supports XML namespaces, CDATA, processing instructions, and attributes.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="XML cleanup" icon="broom">
+    Format XML from APIs, databases, or legacy systems for readability
+  </Card>
+  <Card title="File size reduction" icon="compress">
+    Minify XML configuration files or SOAP messages
+  </Card>
+  <Card title="Validation" icon="circle-check">
+    Check XML well-formedness before processing or transmission
+  </Card>
+  <Card title="Debugging" icon="bug">
+    Beautify minified XML from third-party services
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Uses the `xml-formatter` library to indent tags with 2 spaces. Preserves CDATA, comments, and attributes.
+    
+    **Input:**
+    ```xml
+    <root><item id="1"><name>Product</name></item></root>
+    ```
+    
+    **Output:**
+    ```xml
+    <root>
+      <item id="1">
+        <name>Product</name>
+      </item>
+    </root>
+    ```
+  </Tab>
+  
+  <Tab title="Minify">
+    Removes whitespace between tags with a simple regex.
+    
+    **Input:**
+    ```xml
+    <root>
+      <item id="1">
+        <name>Product</name>
+      </item>
+    </root>
+    ```
+    
+    **Output:**
+    ```xml
+    <root><item id="1"><name>Product</name></item></root>
+    ```
+  </Tab>
+</Tabs>
+
+## Validation
+
+The tool validates XML **before** beautification or minification using `fast-xml-parser`. If the XML is malformed, an error is returned.
+
+<Accordion title="Example: Invalid XML">
+  **Input:**
+  ```xml
+  <root>
+    <item>Unclosed tag
+  </root>
+  ```
+  
+  **Output:**
+  ```
+  Unclosed tag at line 2
+  ```
+</Accordion>
+
+## Implementation Details
+
+The tool imports `fast-xml-parser` for validation and `xml-formatter` for beautification.
+
+**Source:** `lib/tools/engine.ts:544-549`
+
+```typescript Key logic
+case 'xml-beautify': {
+  const { XMLParser } = await import('fast-xml-parser');
+  const parser = new XMLParser();
+  parser.parse(input);  // Throws if invalid
+  return { output: action === 'minify' ? input.replace(/>\s+</g, '><').trim() : (await import('xml-formatter')).default(input, { indentation: '  ' }) };
+}
+```
+
+<Note>
+  The minify operation is a simple regex (`/>\s+</g`) and does **not** preserve whitespace-sensitive content inside text nodes or CDATA.
+</Note>
+
+## XML Feature Support
+
+<AccordionGroup>
+  <Accordion title="Namespaces">
+    ```xml
+    <root xmlns:ns="http://example.com">
+      <ns:item>Content</ns:item>
+    </root>
+    ```
+    Namespaces are preserved during beautification and minification.
+  </Accordion>
+  
+  <Accordion title="CDATA sections">
+    ```xml
+    <script><![CDATA[
+      function test() { return true; }
+    ]]></script>
+    ```
+    CDATA sections are preserved. `xml-formatter` does not modify CDATA content.
+  </Accordion>
+  
+  <Accordion title="Processing instructions">
+    ```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <root/>
+    ```
+    Processing instructions (e.g., `<?xml ... ?>`) are preserved.
+  </Accordion>
+  
+  <Accordion title="Comments">
+    ```xml
+    <!-- This is a comment -->
+    <root/>
+    ```
+    Comments are preserved during beautification and removed during minification.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  The tool validates **well-formedness** only. It does not validate against DTD, XSD, or RelaxNG schemas.
+</Warning>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="HTML Beautify/Minify" href="/tools/html-beautify" icon="code">
+    Format or minify HTML markup
+  </Card>
+  <Card title="JSON Format/Validate" href="/tools/json-format-validate" icon="brackets-curly">
+    Validate and format JSON
+  </Card>
+  <Card title="YAML to JSON" href="/tools/yaml-to-json" icon="arrow-right">
+    Convert YAML to JSON
+  </Card>
+</CardGroup>

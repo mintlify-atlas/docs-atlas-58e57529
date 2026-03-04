@@ -1,0 +1,227 @@
+---
+title: HTML Preview
+description: Safely render HTML in an isolated iframe sandbox
+---
+
+The **HTML Preview** tool renders HTML content in a secure, sandboxed iframe so you can see how it will display in a browser. This is essential for testing HTML snippets, debugging styles, and previewing user-generated content without security risks.
+
+## Use Cases
+
+- **Testing HTML snippets** before embedding them in production
+- **Previewing email templates** in HTML format
+- **Debugging CSS styles** and layout issues
+- **Rendering user-generated content** safely (e.g., from a CMS)
+- **Validating responsive designs** with different viewport sizes
+- **Inspecting HTML from web scraping** or API responses
+
+## How It Works
+
+The tool takes raw HTML input and renders it in an **iframe sandbox** with restricted permissions. This prevents malicious scripts from accessing the parent page or making network requests.
+
+<Note>
+  The iframe uses sandbox attributes to isolate the content:
+  - `allow-same-origin`: Allows rendering within the iframe
+  - No `allow-scripts`: JavaScript is **disabled** by default for security
+  - No `allow-forms`: Form submissions are blocked
+</Note>
+
+## Input Format
+
+Any valid HTML, from simple snippets to complete documents:
+
+```html
+<div style="padding: 20px; background: #f0f0f0; border-radius: 8px;">
+  <h1>Welcome</h1>
+  <p>This is a <strong>preview</strong> of your HTML.</p>
+  <button>Click Me</button>
+</div>
+```
+
+## Output
+
+The tool displays:
+
+1. **HTML source** in the output pane (for reference)
+2. **Live preview** in the preview pane (iframe rendering)
+
+## Examples
+
+<CodeGroup>
+
+```html Simple Card Component
+<div style="max-width: 300px; border: 1px solid #ddd; border-radius: 8px; padding: 16px; font-family: Arial, sans-serif;">
+  <h3 style="margin: 0 0 8px 0; color: #333;">Product Name</h3>
+  <p style="margin: 0 0 12px 0; color: #666; font-size: 14px;">This is a short description of the product.</p>
+  <button style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Add to Cart</button>
+</div>
+```
+
+```html Email Template Preview
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #4CAF50; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9f9f9; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to Our Service</h1>
+    </div>
+    <div class="content">
+      <p>Hi John,</p>
+      <p>Thank you for signing up! We're excited to have you on board.</p>
+      <p><a href="#" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Get Started</a></p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2024 Company Name. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+```
+
+```html CSS Grid Layout
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 20px;">
+  <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; text-align: center;">
+    <h4 style="margin: 0;">Card 1</h4>
+    <p style="margin: 8px 0 0 0; font-size: 14px;">Grid item</p>
+  </div>
+  <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; text-align: center;">
+    <h4 style="margin: 0;">Card 2</h4>
+    <p style="margin: 8px 0 0 0; font-size: 14px;">Grid item</p>
+  </div>
+  <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; text-align: center;">
+    <h4 style="margin: 0;">Card 3</h4>
+    <p style="margin: 8px 0 0 0; font-size: 14px;">Grid item</p>
+  </div>
+</div>
+```
+
+</CodeGroup>
+
+## Security Features
+
+<Warning>
+  JavaScript execution is **disabled** in the preview iframe for security. If you need to test interactive behavior, use a local development environment.
+</Warning>
+
+### Sandbox Restrictions
+
+The iframe uses `sandbox` attributes to prevent:
+
+- **Script execution**: `<script>` tags are ignored
+- **Form submission**: Forms cannot be submitted
+- **Popups**: `window.open()` and similar are blocked
+- **Top-level navigation**: Cannot change the parent page URL
+- **Plugin loading**: `<embed>`, `<object>`, `<applet>` are blocked
+
+### Safe for User-Generated Content
+
+Because scripts are disabled, you can safely preview:
+
+- HTML from untrusted sources (user comments, CMS content)
+- Scraped web pages
+- Third-party widgets (in display-only mode)
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:483-484`
+</Info>
+
+The tool is one of the simplest in the suite:
+
+```typescript
+case 'html-preview':
+  return { output: input, previewHtml: input };
+```
+
+- **`output`**: The raw HTML (displayed in the output pane)
+- **`previewHtml`**: The HTML to render in the iframe (preview pane)
+
+### Preview Pane Implementation
+
+The preview pane (in `ToolWorkbench.tsx`) creates a sandboxed iframe:
+
+```tsx
+<iframe
+  sandbox="allow-same-origin"
+  srcDoc={result.previewHtml}
+  className="w-full h-full border-0"
+/>
+```
+
+## Limitations
+
+<Accordion title="Why doesn't JavaScript work?">
+  JavaScript is intentionally disabled for security. The iframe sandbox prevents script execution to protect against XSS attacks. If you need to test interactive JavaScript, use a local HTML file or a service like CodePen.
+</Accordion>
+
+<Accordion title="Can I preview external CSS/images?">
+  Yes! External resources (CSS, images, fonts) loaded via `<link>` or `<img>` will work if they are publicly accessible. However, resources blocked by CORS or requiring authentication may not load.
+</Accordion>
+
+<Accordion title="Why does my layout look different than in production?">
+  The preview pane has a default white background and no base styles. Your production site may have global CSS resets, base fonts, or container styles that affect rendering. For the most accurate preview, include all necessary inline styles or `<style>` tags.
+</Accordion>
+
+## Common Patterns
+
+### Inline Styles for Email Templates
+
+Email clients often strip `<style>` tags, so use inline styles:
+
+```html
+<p style="margin: 0; padding: 10px; color: #333; font-size: 16px; line-height: 1.5;">
+  Your content here
+</p>
+```
+
+### Testing Responsive Design
+
+Use CSS media queries and resize the preview pane:
+
+```html
+<style>
+  .container { padding: 20px; background: #f0f0f0; }
+  @media (max-width: 600px) {
+    .container { padding: 10px; background: #fff; }
+  }
+</style>
+<div class="container">
+  Resize the preview to test responsiveness
+</div>
+```
+
+### Complete HTML Document
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>This is a complete HTML document.</p>
+</body>
+</html>
+```
+
+## Related Tools
+
+- [HTML Entity Encode/Decode](/tools/html-entity) - Escape HTML special characters
+- [HTML Beautify/Minify](/tools/html-beautify) - Format HTML for readability
+- [HTML to JSX](/tools/html-to-jsx) - Convert HTML to React JSX
+- [Markdown Preview](/tools/markdown-preview) - Render Markdown as HTML

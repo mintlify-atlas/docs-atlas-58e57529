@@ -1,0 +1,317 @@
+---
+title: Number Base Converter
+description: Convert numbers between binary, octal, decimal, and hexadecimal bases
+---
+
+The **Number Base Converter** converts numeric values between different bases (radixes): binary (base 2), octal (base 8), decimal (base 10), and hexadecimal (base 16). It supports arbitrary precision using JavaScript's `BigInt` for large numbers.
+
+## Use Cases
+
+- **Programming and debugging** - Convert between hex, decimal, and binary
+- **Network engineering** - Convert IP addresses and subnet masks
+- **Color codes** - Convert hex color codes to RGB decimal values
+- **Bit manipulation** - Work with binary representations
+- **Memory addresses** - Convert between hex and decimal addresses
+- **Low-level programming** - Octal file permissions, bitmasks
+
+## How It Works
+
+The tool accepts a number in any base (2-36) and displays its equivalent in binary, octal, decimal, and hexadecimal:
+
+1. **Input format:** `value|base` (e.g., `FF|16` for hex, `1010|2` for binary)
+2. **Default base:** If no base is specified, assumes decimal (base 10)
+3. **Output:** Shows conversions to binary, octal, decimal, and hex
+
+<Note>
+  The tool uses **BigInt** for arbitrary precision, so it can handle very large numbers (thousands of digits) without loss of precision.
+</Note>
+
+## Input Format
+
+Format: `number|base`
+
+- `number`: The numeric value (using digits valid for the specified base)
+- `base`: The base/radix (2-36)
+- If base is omitted, assumes base 10
+
+### Valid Digit Ranges by Base
+
+| Base | Valid Digits | Example |
+|------|-------------|----------|
+| 2 (Binary) | 0-1 | `1010` |
+| 8 (Octal) | 0-7 | `755` |
+| 10 (Decimal) | 0-9 | `255` |
+| 16 (Hex) | 0-9, A-F | `FF` (case-insensitive) |
+| 36 (Max) | 0-9, A-Z | `Z` = 35 |
+
+## Output Format
+
+Always shows four representations:
+
+```
+Binary:  11111111
+Octal:   377
+Decimal: 255
+Hex:     FF
+```
+
+## Examples
+
+<CodeGroup>
+
+```text Hexadecimal to All
+Input:
+FF|16
+
+Output:
+Binary:  11111111
+Octal:   377
+Decimal: 255
+Hex:     FF
+```
+
+```text Binary to All
+Input:
+1010|2
+
+Output:
+Binary:  00001010
+Octal:   12
+Decimal: 10
+Hex:     A
+```
+
+```text Decimal to All (Default)
+Input:
+255
+
+Output:
+Binary:  11111111
+Octal:   377
+Decimal: 255
+Hex:     FF
+```
+
+```text Octal to All
+Input:
+755|8
+
+Output:
+Binary:  111101101
+Octal:   755
+Decimal: 493
+Hex:     1ED
+```
+
+```text Large Number (BigInt)
+Input:
+123456789012345678901234567890
+
+Output:
+Binary:  0001100110010111110010001110111010101111100111000101011101010101111001101110101001110011010010
+Octal:   14627621672574705255163512322
+Decimal: 123456789012345678901234567890
+Hex:     18EE90EABCE15D57CD4E9A92
+```
+
+```text Negative Numbers
+Input:
+-42
+
+Output:
+Binary:  -00101010
+Octal:   -52
+Decimal: -42
+Hex:     -2A
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:506-518`
+</Info>
+
+The tool implements a custom base parser using **BigInt** for arbitrary precision:
+
+```typescript
+function parseBase(value: string, base: number): bigint {
+  let acc = 0n;
+  for (const ch of value.toLowerCase()) {
+    const digit = /* convert char to digit value */;
+    acc = acc * BigInt(base) + BigInt(digit);
+  }
+  return acc;
+}
+```
+
+### Supported Bases
+
+- **Range:** 2 to 36
+- **Digits:**
+  - 0-9: Values 0-9
+  - A-Z: Values 10-35 (case-insensitive)
+
+### Negative Numbers
+
+Negative numbers are supported:
+
+```
+Input: -10|10
+Output:
+Binary:  -00001010
+Decimal: -10
+Hex:     -A
+```
+
+### Binary Padding
+
+Binary output is **padded to 8 bits** (1 byte) minimum:
+
+```
+Input: 5
+Binary:  00000101  (padded to 8 bits)
+```
+
+## Common Use Cases
+
+### RGB Color Codes
+
+Convert hex color codes to decimal RGB values:
+
+```
+Hex: #FF5733 → Split into FF, 57, 33
+
+FF|16 → 255 (Red)
+57|16 → 87  (Green)
+33|16 → 51  (Blue)
+
+RGB: rgb(255, 87, 51)
+```
+
+### Unix File Permissions
+
+Convert octal permissions to binary/decimal:
+
+```
+755|8 → Decimal 493 → Binary 111101101
+
+7 (owner)   = 111 = rwx (read, write, execute)
+5 (group)   = 101 = r-x (read, execute)
+5 (others)  = 101 = r-x (read, execute)
+```
+
+### Memory Addresses (Hex to Decimal)
+
+```
+0x1A2B|16 → Decimal 6699
+```
+
+### Subnet Masks
+
+Convert CIDR notation to binary:
+
+```
+255.255.255.0 = /24
+
+255|10 → Binary 11111111
+0|10   → Binary 00000000
+
+Full mask: 11111111.11111111.11111111.00000000
+```
+
+## Advanced Examples
+
+<CodeGroup>
+
+```text Base 36 (Max)
+Input:
+ZZ|36
+
+Output:
+Binary:  10010010001
+Octal:   2221
+Decimal: 1295
+Hex:     50F
+
+Note: Base 36 uses 0-9 and A-Z (Z=35)
+```
+
+```text IPv4 Address Component
+Input:
+192
+
+Output:
+Binary:  11000000
+Octal:   300
+Decimal: 192
+Hex:     C0
+
+Useful for understanding subnet masks
+```
+
+```text Bitmask (Powers of 2)
+Input:
+128
+
+Output:
+Binary:  10000000
+Octal:   200
+Decimal: 128
+Hex:     80
+
+128 = 2^7 (8th bit set)
+```
+
+</CodeGroup>
+
+## Error Handling
+
+<Warning>
+  If you enter a digit that's invalid for the specified base (e.g., `9` in base 8, or `G` in base 16), you'll get an error: "Invalid digit 'X' for base Y."
+</Warning>
+
+### Common Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Invalid digit '2' for base 2 | Used digit outside base range | Use only 0-1 for binary |
+| Invalid digit 'G' for base 16 | Hex only uses 0-F | Use A-F (G is invalid) |
+| Base must be between 2 and 36 | Invalid base specified | Use base 2-36 |
+
+## Tips and Tricks
+
+### Quick Hex to Decimal
+
+```
+FF|16 = 255
+100|16 = 256
+1000|16 = 4096
+```
+
+### Powers of 2 (Binary)
+
+```
+1|2      = 1
+10|2     = 2
+100|2    = 4
+1000|2   = 8
+10000|2  = 16
+100000|2 = 32
+```
+
+### Octal Shortcuts
+
+```
+10|8  = 8
+100|8 = 64
+777|8 = 511
+```
+
+## Related Tools
+
+- [Color Converter](/tools/color-converter) - Convert hex/RGB/HSL color formats
+- [Hex to ASCII](/tools/hex-to-ascii) - Convert hex bytes to ASCII text
+- [ASCII to Hex](/tools/ascii-to-hex) - Convert ASCII text to hex bytes
+- [Hash Generator](/tools/hash-generator) - Generate hashes (outputs in hex)

@@ -1,0 +1,331 @@
+---
+title: Text Separator
+description: Re-separate text with any delimiter, convert between formats, and transform lists
+---
+
+## Overview
+
+The Text Separator splits text on one delimiter and rejoins with another. Convert between newline-separated, comma-separated, tab-separated, and custom delimiters. Includes optional sorting, deduplication, and item counting.
+
+## Use Cases
+
+- **Format Conversion**: Convert CSV to newline-separated or vice versa
+- **List Transformation**: Change delimiter format for different tools
+- **Data Cleanup**: Remove empty items and trim whitespace
+- **SQL Generation**: Convert lists to comma-separated for IN clauses
+- **Text Processing**: Prepare lists for import into other systems
+- **Configuration Files**: Convert between different list formats
+
+## Input Format
+
+### Newline-Separated
+```
+apple
+banana
+cherry
+date
+```
+
+### Comma-Separated
+```
+apple, banana, cherry, date
+```
+
+### Tab-Separated
+```
+apple	banana	cherry	date
+```
+
+### Custom Delimiter
+```
+apple | banana | cherry | date
+```
+
+## Configuration (Second Input)
+
+```
+from_sep=newline
+to_sep=comma
+trim=true
+remove_empty=true
+```
+
+## Configuration Options
+
+### from_sep
+Source delimiter:
+- `newline` (default): Split on line breaks
+- `comma`: Split on commas
+- `comma_space`: Split on comma + space
+- `semicolon`: Split on semicolons
+- `tab`: Split on tabs
+- `space`: Split on spaces
+- `pipe`: Split on pipe characters
+- `custom`: Use custom_from value
+
+### to_sep
+Target delimiter:
+- `comma` (default): Join with commas
+- `comma_space`: Join with comma + space
+- `newline`: Join with line breaks
+- `semicolon`: Join with semicolons
+- `tab`: Join with tabs
+- `space`: Join with spaces
+- `pipe`: Join with pipe characters
+- `custom`: Use custom_to value
+
+### custom_from
+Custom source delimiter (when from_sep=custom):
+```
+custom_from=||
+```
+
+### custom_to
+Custom target delimiter (when to_sep=custom):
+```
+custom_to= | 
+```
+
+### trim
+Trim whitespace from each item:
+- `true` (default): Remove leading/trailing whitespace
+- `false`: Keep whitespace
+
+### remove_empty
+Remove empty items:
+- `true` (default): Filter out empty strings
+- `false`: Keep empty items
+
+## Actions
+
+### Default
+Split and rejoin with new delimiter:
+```
+apple, banana, cherry, date
+```
+
+### Sort
+Split, sort alphabetically, rejoin:
+```
+apple, banana, cherry, date
+```
+
+### Unique
+Split, deduplicate, rejoin:
+```
+apple, banana, cherry, date
+```
+
+### Count
+Count items:
+```
+4 items
+```
+
+## Output Format
+
+Transformed text with new delimiter:
+```
+apple, banana, cherry, date
+```
+
+Metadata:
+```
+4 items | From: newline → To: comma
+```
+
+## Examples
+
+<CodeGroup>
+```text Input: Newline to Comma
+apple
+banana
+cherry
+date
+```
+
+```text Config
+from_sep=newline
+to_sep=comma_space
+```
+
+```text Output
+apple, banana, cherry, date
+
+Meta: 4 items | From: newline → To: comma_space
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Comma to Newline
+apple, banana, cherry, date
+```
+
+```text Config
+from_sep=comma
+to_sep=newline
+```
+
+```text Output
+apple
+banana
+cherry
+date
+
+Meta: 4 items | From: comma → To: newline
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Sort
+zebra
+apple
+mango
+banana
+```
+
+```text Config
+from_sep=newline
+to_sep=comma_space
+```
+
+```text Output (Sort Action)
+apple, banana, mango, zebra
+
+Meta: 4 items | From: newline → To: comma_space
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Deduplicate
+apple
+banana
+apple
+cherry
+banana
+```
+
+```text Config
+from_sep=newline
+to_sep=comma_space
+```
+
+```text Output (Unique Action)
+apple, banana, cherry
+
+Meta: 3 items | From: newline → To: comma_space
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Custom Delimiter
+apple || banana || cherry || date
+```
+
+```text Config
+from_sep=custom
+custom_from= || 
+to_sep=newline
+```
+
+```text Output
+apple
+banana
+cherry
+date
+
+Meta: 4 items | From: custom → To: newline
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: Remove Empty and Trim
+apple  
+
+banana
+  
+cherry
+```
+
+```text Config
+from_sep=newline
+to_sep=comma_space
+trim=true
+remove_empty=true
+```
+
+```text Output
+apple, banana, cherry
+
+Meta: 3 items | From: newline → To: comma_space
+```
+</CodeGroup>
+
+<CodeGroup>
+```text Input: SQL IN Clause Prep
+user123
+user456
+user789
+```
+
+```text Config
+from_sep=newline
+to_sep=comma_space
+```
+
+```text Output
+user123, user456, user789
+
+Meta: 3 items | From: newline → To: comma_space
+
+-- Use in SQL:
+SELECT * FROM users WHERE username IN ('user123', 'user456', 'user789');
+```
+</CodeGroup>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:708-735`:
+
+```typescript
+case 'text-separator': {
+  const cfg: Record<string, string> = {};
+  for (const line of (options.secondInput || '').split('\n')) {
+    const eq = line.indexOf('=');
+    if (eq > 0) cfg[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
+  }
+  const sepMap: Record<string, string> = {
+    newline: '\n', comma: ',', comma_space: ', ', semicolon: ';',
+    tab: '\t', space: ' ', pipe: '|',
+  };
+  const fromSep = cfg.from_sep === 'custom' ? (cfg.custom_from || ',') : (sepMap[cfg.from_sep] || '\n');
+  const toSep = cfg.to_sep === 'custom' ? (cfg.custom_to || ',') : (sepMap[cfg.to_sep] || ',');
+  const doTrim = cfg.trim !== 'false';
+  const removeEmpty = cfg.remove_empty !== 'false';
+
+  let items = input.split(fromSep);
+  if (doTrim) items = items.map(s => s.trim());
+  if (removeEmpty) items = items.filter(Boolean);
+
+  let result: string;
+  switch (action) {
+    case 'sort': result = [...items].sort((a, b) => a.localeCompare(b)).join(toSep); break;
+    case 'unique': result = [...new Set(items)].join(toSep); break;
+    case 'count': result = `${items.length} items`; break;
+    default: result = items.join(toSep);
+  }
+  return { output: result, meta: `${items.length} items | From: ${cfg.from_sep || 'newline'} → To: ${cfg.to_sep || 'comma'}` };
+}
+```
+
+<Note>
+The Text Separator handles edge cases like empty strings, leading/trailing whitespace, and custom delimiters with special characters (including multi-character delimiters).
+</Note>
+
+<Tip>
+For SQL IN clauses, first convert to comma-separated format, then wrap items with quotes manually or use the List Splitter tool with the `sql_in` template.
+</Tip>
+
+<Warning>
+Custom delimiters that appear within items will cause incorrect splits. For complex data with embedded delimiters, use proper CSV parsing instead.
+</Warning>

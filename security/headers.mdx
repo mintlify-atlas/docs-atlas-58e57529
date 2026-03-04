@@ -1,0 +1,544 @@
+---
+title: HTTP Security Headers
+description: Comprehensive security headers configuration protecting against XSS, clickjacking, MIME sniffing, and other web vulnerabilities
+---
+
+## Overview
+
+Kayston's Forge implements strict HTTP security headers to provide defense-in-depth against common web vulnerabilities. All headers are configured in `vercel.json` and applied to every response by Vercel's edge network.
+
+<Note>
+  These headers are applied at the CDN edge before responses reach the client, providing a strong security baseline for the static application.
+</Note>
+
+## Complete Headers Configuration
+
+The application applies the following security headers to all routes:
+
+```json
+// vercel.json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains; preload"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'self';"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Header-by-Header Breakdown
+
+### X-Content-Type-Options: nosniff
+
+**Purpose**: Prevents MIME type sniffing attacks
+
+```http
+X-Content-Type-Options: nosniff
+```
+
+This header instructs browsers to:
+- Strictly honor the `Content-Type` header sent by the server
+- Not attempt to "sniff" or guess content types from file contents
+- Block execution of JavaScript files served with non-executable MIME types
+
+**Attack Prevention**:
+
+Without this header, attackers could upload files (e.g., images) containing JavaScript and trick the browser into executing them by manipulating the response or relying on browser heuristics.
+
+<Note>
+  All static assets are served with correct MIME types, so this header provides strong protection against MIME confusion attacks.
+</Note>
+
+### X-Frame-Options: DENY
+
+**Purpose**: Prevents clickjacking attacks by blocking all framing
+
+```http
+X-Frame-Options: DENY
+```
+
+This header prevents the application from being embedded in `<iframe>`, `<frame>`, `<embed>`, or `<object>` elements on any domain, including the application's own origin.
+
+**Attack Prevention**:
+
+Clickjacking attacks involve:
+1. Attacker embeds victim site in transparent iframe
+2. Overlays deceptive UI elements
+3. User thinks they're clicking attacker's UI but actually clicking victim site
+
+By denying all framing, we eliminate this attack vector entirely.
+
+<Warning>
+  This is a stronger setting than `X-Frame-Options: SAMEORIGIN`. The application cannot be embedded even on its own domain.
+</Warning>
+
+**CSP Equivalent**: This is reinforced by `frame-ancestors 'none'` in the Content-Security-Policy.
+
+### Referrer-Policy: strict-origin-when-cross-origin
+
+**Purpose**: Controls how much referrer information is sent with requests
+
+```http
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+This policy means:
+
+| Scenario | Referrer Sent |
+|----------|---------------|
+| Same-origin navigation | Full URL (path and query string) |
+| Cross-origin HTTPS → HTTPS | Origin only (no path) |
+| Cross-origin HTTPS → HTTP | No referrer (downgrade blocked) |
+| Cross-origin same-protocol | Origin only |
+
+**Privacy & Security Benefits**:
+
+- Prevents leaking sensitive URL parameters (e.g., tokens, IDs) to third-party domains
+- Blocks referrer on HTTPS → HTTP downgrades (prevents credential leakage)
+- Still provides origin for legitimate cross-origin requests (CORS, analytics)
+
+<Note>
+  This balances privacy (not leaking full URLs) with functionality (allowing referrer-based security checks).
+</Note>
+
+### Permissions-Policy
+
+**Purpose**: Disables browser features and APIs not needed by the application
+
+```http
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=()
+```
+
+Explicit denials:
+
+| Feature | Blocked | Rationale |
+|---------|---------|----------|
+| `camera=()` | All access to camera | Not needed for developer tools |
+| `microphone=()` | All access to microphone | Not needed for developer tools |
+| `geolocation=()` | All location access | Privacy violation, not needed |
+| `payment=()` | Payment Request API | No payment functionality |
+| `usb=()` | WebUSB API | Not needed, potential malware vector |
+| `magnetometer=()` | Magnetometer sensor | Not needed, fingerprinting risk |
+| `accelerometer=()` | Accelerometer sensor | Not needed, fingerprinting risk |
+
+**Attack Surface Reduction**:
+
+By explicitly denying these features:
+- Reduces browser APIs available to XSS attackers
+- Prevents permission prompt phishing
+- Mitigates device fingerprinting vectors
+- Signals security-conscious design to users
+
+<Warning>
+  The empty parentheses `()` syntax means "deny to all origins, including self". Even if the application is compromised, these APIs remain blocked.
+</Warning>
+
+### Strict-Transport-Security (HSTS)
+
+**Purpose**: Forces HTTPS and prevents protocol downgrade attacks
+
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+Breakdown:
+
+- `max-age=31536000`: Cache this policy for 365 days (1 year)
+- `includeSubDomains`: Apply policy to all subdomains
+- `preload`: Eligible for browser HSTS preload lists
+
+**Attack Prevention**:
+
+1. **SSL Stripping**: Prevents MITM attackers from downgrading HTTPS → HTTP
+2. **Mixed Content**: Ensures all resources load over HTTPS
+3. **Certificate Errors**: Users cannot click through certificate warnings
+
+<Note>
+  Once a browser sees this header, it will refuse to connect over HTTP for the entire `max-age` period, even if the user types `http://` in the address bar.
+</Note>
+
+**HSTS Preload List**:
+
+The `preload` directive indicates the domain should be submitted to browser vendors' HSTS preload lists:
+
+- Chrome/Edge: https://hstspreload.org/
+- Firefox: Uses Chrome's list
+- Safari: Uses Chrome's list
+
+Once preloaded, browsers enforce HTTPS **before the first visit**, eliminating the "first-visit" window where HSTS hasn't been cached yet.
+
+### Content-Security-Policy (CSP)
+
+**Purpose**: Defines allowed sources for scripts, styles, images, and other resources
+
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self' blob:; frame-ancestors 'none'; object-src 'none'; base-uri 'self';
+```
+
+This is the most complex and critical security header. Let's break it down directive by directive:
+
+#### default-src 'self'
+
+**Fallback policy for all unspecified directives**
+
+Means: By default, only load resources from the same origin.
+
+This sets a secure baseline. Any directive not explicitly specified inherits this policy.
+
+#### script-src 'self' 'unsafe-inline'
+
+**Allowed sources for JavaScript**
+
+- `'self'`: JavaScript files from the same origin
+- `'unsafe-inline'`: Inline `<script>` tags and event handlers
+
+<Warning>
+  **Known Risk: `'unsafe-inline'` weakens XSS protection**
+  
+  Next.js 14 with `output: 'export'` inlines a small hydration bootstrap script that cannot be hashed or nonced. This requires `'unsafe-inline'` in `script-src`. Without it, the React tree fails to hydrate and the app becomes non-functional.
+  
+  This means the CSP provides **no script-injection backstop** for XSS. All XSS mitigation relies on:
+  - DOMPurify sanitization of all HTML rendered via `dangerouslySetInnerHTML`
+  - React's default output escaping for all `{expression}` interpolations
+  - The `<iframe sandbox="">` for HTML and markdown preview panes
+</Warning>
+
+**Mitigation Path**:
+
+A nonce-based or hash-based CSP would eliminate this risk but requires a custom Next.js server runtime, which is incompatible with fully static export. This trade-off is documented in `security.md:127-138`.
+
+**Why This Is Accepted**:
+
+- The application is fully static with no server-side code execution
+- All dynamic content rendering uses React's XSS-safe JSX escaping
+- High-risk preview features (HTML, Markdown) use sandboxed iframes
+- No user-generated content is stored or rendered between sessions
+
+#### style-src 'self' 'unsafe-inline'
+
+**Allowed sources for CSS**
+
+- `'self'`: Stylesheets from the same origin
+- `'unsafe-inline'`: Inline `<style>` tags and `style=""` attributes
+
+**Rationale**: Tailwind CSS and Next.js generate inline styles for dynamic theming and component styles. CSS injection attacks are lower risk than script injection (no code execution), but can still enable:
+
+- UI redressing attacks
+- Data exfiltration via CSS injection (attribute selectors + background URLs)
+- Clickjacking via absolute positioning overlays
+
+<Note>
+  CSS injection is mitigated by: no user-generated CSS, all styles are application-controlled, and X-Frame-Options prevents embedding.
+</Note>
+
+#### img-src 'self' data: blob:
+
+**Allowed sources for images**
+
+- `'self'`: Images from same origin
+- `data:`: Data URLs (e.g., `data:image/png;base64,...`)
+- `blob:`: Blob URLs (e.g., `blob:https://...`)
+
+**Rationale**: Developer tools need to:
+- Display QR codes (generated as data URLs)
+- Show preview images (potentially loaded as blobs)
+- Render static assets (favicon, icons from same origin)
+
+No third-party image hosts are allowed, preventing:
+- Tracking pixels
+- EXIF/metadata exfiltration
+- Mixed content issues
+
+#### font-src 'self'
+
+**Allowed sources for fonts**
+
+Only same-origin fonts are allowed. This blocks:
+- Third-party font tracking (e.g., Google Fonts)
+- Font fingerprinting
+- Malicious font files (font parser exploits)
+
+**Implementation**: All fonts (DM Sans, Playfair Display, Fira Code) are self-hosted in `public/fonts/`.
+
+#### connect-src 'self'
+
+**Allowed destinations for fetch, XHR, WebSocket, EventSource**
+
+Only same-origin connections are allowed. This is critical for the privacy-first architecture:
+
+- Blocks all third-party API calls
+- Prevents data exfiltration via fetch/XHR
+- No analytics beacons or tracking endpoints
+- No WebSocket connections to external services
+
+<Note>
+  Because the application is fully static with no backend APIs, even same-origin fetch requests will only retrieve static assets (which use `default-src`).
+</Note>
+
+#### worker-src 'self'
+
+**Allowed sources for Web Workers and Service Workers**
+
+Only same-origin workers are allowed. The application uses:
+
+- `public/sw.js`: Service worker for PWA offline caching
+- No Web Workers currently (may be added for heavy computations)
+
+**Security Benefits**:
+- Workers cannot be loaded from third-party CDNs
+- No worker-based cryptocurrency miners
+- No worker-based tracking scripts
+
+#### frame-src 'self' blob:
+
+**Allowed sources for iframes**
+
+- `'self'`: Iframes from same origin (not currently used)
+- `blob:`: Blob URLs for sandboxed preview iframes
+
+**Implementation**: The HTML and Markdown preview tools render untrusted content in sandboxed iframes:
+
+```typescript
+// Sandboxed iframe for HTML preview
+<iframe
+  sandbox="allow-scripts"  // Minimal permissions
+  srcDoc={previewHtml}     // Inline content, not loaded from URL
+  className="w-full h-full border-0"
+/>
+```
+
+The `sandbox` attribute provides additional isolation beyond CSP:
+- `allow-scripts`: Required for interactive previews
+- Missing `allow-same-origin`: Prevents accessing parent window
+- Missing `allow-forms`: Prevents form submission
+- Missing `allow-popups`: Prevents opening new windows
+
+#### frame-ancestors 'none'
+
+**Allowed parents that can embed this page in a frame**
+
+No framing is allowed from any origin. This is the modern CSP equivalent of `X-Frame-Options: DENY`.
+
+**Relationship to X-Frame-Options**:
+
+Both headers are sent for defense-in-depth:
+- Older browsers honor `X-Frame-Options`
+- Modern browsers honor `frame-ancestors` (CSP2)
+- If they conflict, CSP takes precedence
+
+#### object-src 'none'
+
+**Allowed sources for `<object>`, `<embed>`, and `<applet>`**
+
+All plugin-based content is blocked. This prevents:
+- Flash exploits (legacy)
+- Java applet exploits (legacy)
+- PDF reader exploits
+- Arbitrary plugin execution
+
+<Note>
+  Modern browsers are phasing out plugin support, but this header provides defense-in-depth for older browsers and enterprise environments.
+</Note>
+
+#### base-uri 'self'
+
+**Allowed values for `<base href="">`**
+
+Only same-origin base URLs are allowed. This prevents:
+
+1. **Relative URL hijacking**: Attacker injects `<base href="https://evil.com">`
+2. All relative URLs in the page now resolve to attacker's domain
+3. JavaScript files, stylesheets, and API calls now load from attacker
+
+**Why This Matters**:
+
+Even though the application doesn't use `<base>` tags, this prevents XSS attackers from injecting one to escalate their attack.
+
+## Testing Security Headers
+
+You can verify these headers are applied correctly:
+
+### 1. Browser Developer Tools
+
+1. Open DevTools (F12)
+2. Navigate to Network tab
+3. Refresh the page
+4. Click on the document request (usually the first one)
+5. View Response Headers
+
+### 2. Command Line (cURL)
+
+```bash
+curl -I https://kaystons-forge.vercel.app/
+```
+
+Expected output:
+
+```http
+HTTP/2 200
+content-type: text/html; charset=utf-8
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: camera=(), microphone=(), geolocation=()...
+strict-transport-security: max-age=31536000; includeSubDomains; preload
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline'...
+```
+
+### 3. Online Security Header Analyzers
+
+- [securityheaders.com](https://securityheaders.com/)
+- [Mozilla Observatory](https://observatory.mozilla.org/)
+
+<Warning>
+  These scanners may flag `'unsafe-inline'` in CSP as a weakness. This is a known trade-off for Next.js static export (see above).
+</Warning>
+
+## Header Evolution and Deprecations
+
+### Deprecated Headers (Not Used)
+
+#### X-XSS-Protection
+
+**Status**: Deprecated, not included
+
+**Reason**: This header enabled browser-based XSS filters in Internet Explorer and older Chrome versions. Modern browsers have removed these filters because they introduced new vulnerabilities (XSS via filter bypass).
+
+**Modern Alternative**: Content-Security-Policy provides superior XSS protection.
+
+### Future Considerations
+
+#### Cross-Origin-Opener-Policy (COOP)
+
+**Status**: Not yet implemented
+
+**Potential Value**: Isolates browsing context from cross-origin windows
+
+```http
+Cross-Origin-Opener-Policy: same-origin
+```
+
+Would prevent `window.opener` access if the app is opened from a cross-origin page. Low priority because:
+- Application doesn't use `window.opener`
+- No sensitive operations depend on opener isolation
+
+#### Cross-Origin-Embedder-Policy (COEP)
+
+**Status**: Not yet implemented
+
+**Potential Value**: Required for `SharedArrayBuffer` and high-resolution timers
+
+```http
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Would be needed if the application adds:
+- Multi-threaded processing with SharedArrayBuffer
+- High-precision timer-dependent crypto operations
+
+Currently not needed for any tool functionality.
+
+#### Cross-Origin-Resource-Policy (CORP)
+
+**Status**: Not yet implemented
+
+**Potential Value**: Prevents resources from being loaded cross-origin
+
+```http
+Cross-Origin-Resource-Policy: same-origin
+```
+
+Low priority because:
+- All resources are static and non-sensitive
+- No user-specific or privileged data in static assets
+
+## CSP Reporting (Future Enhancement)
+
+Potential future addition for monitoring CSP violations:
+
+```http
+Content-Security-Policy: ...; report-uri /api/csp-report
+```
+
+This would allow:
+- Detecting XSS attempts in production
+- Identifying misconfigured CSP directives
+- Monitoring for inline script injection attempts
+
+<Warning>
+  CSP reporting requires a server-side endpoint to receive reports, which would compromise the static-only architecture. Could be implemented as an optional Vercel Edge Function in the future.
+</Warning>
+
+## Security Header Best Practices
+
+Lessons learned from this implementation:
+
+### 1. Defense in Depth
+
+Multiple headers protect against the same attack vector:
+- `X-Frame-Options: DENY` + `frame-ancestors 'none'` (clickjacking)
+- Specific directives + `default-src 'self'` (resource loading)
+
+### 2. Secure Defaults
+
+Start with strictest possible policy and relax only when necessary:
+- Begin with `default-src 'none'`
+- Add exceptions only for required functionality
+- Document every exception and its rationale
+
+### 3. Test Before Deploy
+
+Every CSP change should be tested in development:
+```bash
+npm run build && npm run preview
+```
+
+Check browser console for CSP violations before pushing to production.
+
+### 4. Monitor and Iterate
+
+Security headers are not "set and forget":
+- Review quarterly for new browser features
+- Update when adding new dependencies or features
+- Track browser support and deprecations
+
+## Conclusion
+
+Kayston's Forge implements a comprehensive security header policy that:
+
+- Provides strong protection against clickjacking, MIME sniffing, and protocol downgrades
+- Reduces attack surface by disabling unnecessary browser APIs
+- Enforces strict resource loading policies via CSP
+- Balances security with functionality (documented trade-offs)
+
+<Note>
+  All headers are version-controlled in `vercel.json` and applied automatically by the CDN. No runtime configuration is required.
+</Note>
+
+For questions about the security header configuration, contact security@kaystons.dev.

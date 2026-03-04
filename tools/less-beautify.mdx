@@ -1,0 +1,147 @@
+---
+title: LESS Beautify/Minify
+description: Format or minify LESS stylesheets with indentation and whitespace control
+---
+
+# LESS Beautify/Minify
+
+Format or minify LESS stylesheets. Beautify adds indentation for nested rules; minify removes comments and whitespace.
+
+## Overview
+
+The LESS Beautify/Minify tool processes LESS as CSS:
+- **Beautify** — Indents rules, properties, and nested selectors with 2 spaces
+- **Minify** — Removes comments, collapses whitespace, and strips unnecessary characters
+
+Supports LESS syntax including nested rules, variables, and mixins.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="LESS cleanup" icon="broom">
+    Format LESS files for readability and team consistency
+  </Card>
+  <Card title="Build optimization" icon="gauge-high">
+    Minify LESS before compilation to reduce intermediate file size
+  </Card>
+  <Card title="Migration" icon="arrows-rotate">
+    Reformat legacy LESS files with consistent indentation
+  </Card>
+  <Card title="Debugging" icon="bug">
+    Beautify minified LESS from third-party libraries
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Indents rules, properties, and nested selectors with 2 spaces per level.
+    
+    **Input:**
+    ```less
+    .header{background:@color;.nav{display:flex;}}
+    ```
+    
+    **Output:**
+    ```less
+    .header {
+      background: @color;
+      .nav {
+        display: flex;
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Minify">
+    Removes comments, collapses whitespace, and strips unnecessary characters.
+    
+    **Input:**
+    ```less
+    /* Variables */
+    @color: #333;
+    .header {
+      background: @color;
+    }
+    ```
+    
+    **Output:**
+    ```less
+    @color:#333;.header{background:@color}
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+The LESS beautifier uses the same CSS beautification algorithm as the [CSS Beautify](/tools/css-beautify) tool. LESS-specific syntax (variables `@var`, mixins `.mixin()`, nesting) is treated as CSS syntax.
+
+**Source:** `lib/tools/engine.ts:525-528`
+
+```typescript Key logic
+case 'less-beautify':
+case 'scss-beautify': {
+  return { output: action === 'minify' ? minifyCss(input) : beautifyCss(input) };
+}
+```
+
+<Note>
+  The beautifier does **not** parse LESS semantics (variable scope, mixin expansion). It formats based on CSS structure only.
+</Note>
+
+## LESS Feature Support
+
+<AccordionGroup>
+  <Accordion title="Variables">
+    ```less
+    @primary: #007bff;
+    color: @primary;
+    ```
+    Variables are preserved and formatted as CSS properties.
+  </Accordion>
+  
+  <Accordion title="Nested rules">
+    ```less
+    .header {
+      .nav {
+        display: flex;
+      }
+    }
+    ```
+    Nested rules are indented with 2 spaces per level.
+  </Accordion>
+  
+  <Accordion title="Mixins">
+    ```less
+    .rounded(@radius: 5px) {
+      border-radius: @radius;
+    }
+    ```
+    Mixins are formatted as rulesets. Mixin calls (`.rounded(10px);`) are treated as properties.
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  For LESS-aware formatting with semantic validation, use the official `lessc` compiler with `--clean-css` or a dedicated LESS formatter.
+</Warning>
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="SCSS Beautify/Minify" href="/tools/scss-beautify" icon="paintbrush">
+    Format or minify SCSS (Sass) stylesheets
+  </Card>
+  <Card title="CSS Beautify/Minify" href="/tools/css-beautify" icon="paintbrush">
+    Format or minify vanilla CSS (same algorithm)
+  </Card>
+  <Card title="HTML Beautify/Minify" href="/tools/html-beautify" icon="code">
+    Format or minify HTML markup
+  </Card>
+</CardGroup>

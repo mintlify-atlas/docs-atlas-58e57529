@@ -1,0 +1,280 @@
+---
+title: PHP Serializer
+description: Serialize JSON data to PHP serialize format
+---
+
+## Overview
+
+The PHP Serializer converts JSON data into PHP's native serialize format. This compact, type-preserving format is used by PHP for session storage, caching, and data persistence.
+
+## Use Cases
+
+- **Session Storage**: Generate PHP session data from JSON
+- **Cache Systems**: Create cache entries in PHP serialize format
+- **Database Storage**: Store complex data in serialized columns
+- **Data Migration**: Convert JSON to PHP serialize for legacy systems
+- **WordPress**: Generate option/meta values in serialize format
+- **Memcache/Redis**: Store PHP data with type preservation
+
+## Input Format
+
+Standard JSON:
+
+```json
+{
+  "name": "Alice",
+  "age": 30,
+  "active": true
+}
+```
+
+```json
+[
+  "item1",
+  "item2",
+  "item3"
+]
+```
+
+```json
+{
+  "nested": {
+    "deep": {
+      "value": 123
+    }
+  }
+}
+```
+
+## Output Format
+
+PHP serialized string:
+
+```php
+a:3:{s:4:"name";s:5:"Alice";s:3:"age";i:30;s:6:"active";b:1;}
+```
+
+## Examples
+
+<CodeGroup>
+```json Input: Simple Object
+{
+  "name": "John",
+  "email": "john@example.com",
+  "verified": true
+}
+```
+
+```php Output
+a:3:{s:4:"name";s:4:"John";s:5:"email";s:16:"john@example.com";s:8:"verified";b:1;}
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Array
+[
+  "red",
+  "green",
+  "blue"
+]
+```
+
+```php Output
+a:3:{i:0;s:3:"red";i:1;s:5:"green";i:2;s:4:"blue";}
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Mixed Types
+{
+  "string": "hello",
+  "integer": 42,
+  "float": 3.14,
+  "boolean": false,
+  "null": null,
+  "array": [1, 2, 3]
+}
+```
+
+```php Output
+a:6:{s:6:"string";s:5:"hello";s:7:"integer";i:42;s:5:"float";d:3.14;s:7:"boolean";b:0;s:4:"null";N;s:5:"array";a:3:{i:0;i:1;i:1;i:2;i:2;i:3;}}
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Nested Structure
+{
+  "user": {
+    "profile": {
+      "name": "Alice",
+      "age": 28
+    },
+    "settings": {
+      "theme": "dark"
+    }
+  }
+}
+```
+
+```php Output
+a:1:{s:4:"user";a:2:{s:7:"profile";a:2:{s:4:"name";s:5:"Alice";s:3:"age";i:28;}s:8:"settings";a:1:{s:5:"theme";s:4:"dark";}}}
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Unicode and UTF-8
+{
+  "message": "Hello 世界",
+  "emoji": "🌍🚀",
+  "accents": "café"
+}
+```
+
+```php Output
+a:3:{s:7:"message";s:12:"Hello 世界";s:5:"emoji";s:8:"🌍🚀";s:7:"accents";s:5:"café";}
+```
+</CodeGroup>
+
+<CodeGroup>
+```json Input: Empty Values
+{
+  "emptyString": "",
+  "emptyArray": [],
+  "emptyObject": {},
+  "null": null
+}
+```
+
+```php Output
+a:4:{s:11:"emptyString";s:0:"";s:10:"emptyArray";a:0:{}s:11:"emptyObject";a:0:{}s:4:"null";N;}
+```
+</CodeGroup>
+
+## PHP Serialize Format
+
+### Type Markers
+
+| Type | Format | Example |
+|------|--------|--------|
+| NULL | `N;` | `N;` |
+| Boolean | `b:0;` or `b:1;` | `b:1;` (true) |
+| Integer | `i:value;` | `i:42;` |
+| Float | `d:value;` | `d:3.14;` |
+| String | `s:length:"value";` | `s:5:"hello";` |
+| Array | `a:count:{elements}` | `a:2:{...}` |
+
+### String Encoding
+Strings use **byte length** (UTF-8), not character count:
+```php
+s:12:"Hello 世界";
+```
+- "Hello 世界" is 9 characters but 12 bytes in UTF-8
+
+### Array Encoding
+Sequential arrays:
+```php
+a:3:{i:0;s:1:"a";i:1;s:1:"b";i:2;s:1:"c";}
+```
+- `a:3` = array with 3 elements
+- `i:0` = integer key 0
+- `s:1:"a"` = string value "a"
+
+Associative arrays:
+```php
+a:2:{s:4:"name";s:4:"John";s:3:"age";i:30;}
+```
+- `s:4:"name"` = string key "name"
+- `s:4:"John"` = string value "John"
+
+### Nested Arrays
+```php
+a:1:{s:4:"user";a:2:{s:2:"id";i:1;s:4:"name";s:5:"Alice";}}
+```
+- Outer array with 1 element
+- Key "user" maps to nested array
+- Nested array has 2 elements
+
+## Use in PHP
+
+Serialize from JSON:
+```php
+$json = '{"name":"Alice","age":28}';
+$data = json_decode($json, true);
+$serialized = serialize($data);
+// a:2:{s:4:"name";s:5:"Alice";s:3:"age";i:28;}
+```
+
+Unserialize back to PHP:
+```php
+$serialized = 'a:2:{s:4:"name";s:5:"Alice";s:3:"age";i:28;}';
+$data = unserialize($serialized);
+// ['name' => 'Alice', 'age' => 28]
+```
+
+Store in database:
+```php
+$user_meta = serialize(['theme' => 'dark', 'notifications' => true]);
+update_user_meta($user_id, 'preferences', $user_meta);
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:769-772`:
+
+```typescript
+case 'php-serializer': {
+  const val = parseJsonLoose(input);
+  return { output: phpSerialize(val as PhpValue) };
+}
+```
+
+From `lib/tools/php-tools.ts:99-127`:
+
+```typescript
+export function phpSerialize(value: PhpValue): string {
+  if (value === null) return 'N;';
+  if (typeof value === 'boolean') return `b:${value ? 1 : 0};`;
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? `i:${value};` : `d:${value};`;
+  }
+  if (typeof value === 'string') {
+    const byteLen = new TextEncoder().encode(value).length;
+    return `s:${byteLen}:"${value}";`;
+  }
+  if (Array.isArray(value)) {
+    const items = value.map((v, i) => `i:${i};${phpSerialize(v)}`).join('');
+    return `a:${value.length}:{${items}}`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    const items = entries
+      .map(([k, v]) => {
+        const key = /^\d+$/.test(k)
+          ? `i:${parseInt(k)};`
+          : `s:${new TextEncoder().encode(k).length}:"${k}";`;
+        return key + phpSerialize(v);
+      })
+      .join('');
+    return `a:${entries.length}:{${items}}`;
+  }
+  return 'N;';
+}
+```
+
+<Note>
+The serializer correctly handles UTF-8 multibyte characters by using byte length (not character count) for string serialization, ensuring compatibility with PHP's native `serialize()` function.
+</Note>
+
+<Tip>
+For WordPress option/meta storage:
+1. Convert your JSON data to PHP serialize format
+2. Use `update_option()` or `update_post_meta()` with the serialized string
+3. WordPress will store it directly without double-serialization
+</Tip>
+
+<Warning>
+- Never unserialize untrusted data in PHP (security risk: object injection attacks)
+- Serialized data is not human-readable; use PHP array syntax for config files
+- Format is PHP-specific; use JSON for cross-platform data exchange
+- Objects cannot be serialized (only arrays and primitives)
+</Warning>

@@ -1,0 +1,71 @@
+---
+title: Introduction
+description: Kayston's Forge is a privacy-first browser developer utilities suite with 47 tools for encoding, conversion, beautification, and data transformation.
+---
+
+Kayston's Forge is a **privacy-first, browser-based developer utilities suite** built with Next.js. All processing runs entirely client-side—your data never leaves your browser.
+
+## What is Kayston's Forge?
+
+Kayston's Forge provides 47 essential developer tools across seven categories:
+
+- **Encoding & Encryption**: Unix timestamps, JSON validation, Base64, JWT debugging, RegExp testing, URL encoding, certificate decoding
+- **Escaping & Entities**: HTML entities, backslash escaping, UUID/ULID generation
+- **Preview & Comparison**: HTML preview, text diff checker
+- **Format Converters**: YAML ↔ JSON, number base conversion, color conversion, cURL to code, hex ↔ ASCII
+- **Code Beautifiers**: HTML, CSS, JavaScript/TypeScript, ERB, LESS, SCSS, XML formatting and minification
+- **Generators**: Lorem Ipsum, QR codes, random strings, string inspection
+- **Data Transformers**: CSV ↔ JSON, hash generation, HTML to JSX, Markdown preview, SQL formatting, list operations, PHP serialization, and more
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Privacy-First" icon="shield-check">
+    All processing happens in your browser. No data is sent to external servers.
+  </Card>
+  <Card title="Keyboard-Driven" icon="keyboard">
+    Command palette (Cmd/Ctrl+K), sidebar toggle (Cmd/Ctrl+1), and execution shortcuts (Cmd/Ctrl+Enter).
+  </Card>
+  <Card title="Tool History" icon="clock-rotate-left">
+    Per-tool history stored in IndexedDB with restore and clear actions (max 50 entries per tool).
+  </Card>
+  <Card title="Offline-Ready" icon="wifi-slash">
+    PWA manifest and service worker enable offline access after initial load.
+  </Card>
+</CardGroup>
+
+## Tech Stack
+
+Kayston's Forge is built with modern web technologies:
+
+- **Next.js 14** + React 18 + TypeScript (strict mode)
+- **Tailwind CSS** for styling with Solarized Light theme
+- **Zustand** for UI state management
+- **Dexie** for IndexedDB storage
+- **Heroicons** for iconography
+
+The application is exported as a fully static site (`output: 'export'`) and hosted on Vercel.
+
+## Security & Privacy
+
+<Note>
+  Kayston's Forge implements strict security headers (CSP, HSTS, X-Content-Type-Options) and undergoes automated security scanning with CodeQL SAST, npm audit, and TruffleHog secret detection.
+</Note>
+
+All data processing is synchronous and runs in your browser's JavaScript runtime. No telemetry, analytics, or external API calls are made.
+
+## Architecture Overview
+
+The tool system is driven by three core components:
+
+1. **Registry** (`lib/tools/registry.ts`) — Defines all 47 tools with metadata (id, name, category, icon, keywords)
+2. **Engine** (`lib/tools/engine.ts`) — Synchronous processing function with tool-specific logic
+3. **Workbench** (`components/tools/ToolWorkbench.tsx`) — Unified UI for all tools with input/output handling
+
+## Get Started
+
+Ready to use Kayston's Forge? Follow the [Quickstart](/quickstart) guide to access the app and try your first tool.
+
+<Card title="Quickstart" icon="rocket" href="/quickstart">
+  Get from zero to using your first tool in under 2 minutes
+</Card>

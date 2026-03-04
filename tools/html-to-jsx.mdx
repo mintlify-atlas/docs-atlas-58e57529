@@ -1,0 +1,262 @@
+---
+title: HTML to JSX
+description: Convert HTML markup to JSX/React syntax with automatic transformation
+---
+
+## Overview
+
+The HTML to JSX converter transforms standard HTML markup into JSX syntax compatible with React and other JSX-based frameworks. Automatically handles attribute name conversions (e.g., `class` → `className`), self-closing tags, and JSX-specific syntax requirements.
+
+## Use Cases
+
+- **React Migration**: Convert existing HTML templates to React components
+- **Component Development**: Transform HTML mockups into JSX markup
+- **Code Generation**: Generate JSX from design tools or HTML exports
+- **Learning**: Understand differences between HTML and JSX syntax
+- **Rapid Prototyping**: Quickly convert static HTML to React-ready JSX
+
+## Input Format
+
+Standard HTML markup:
+
+```html
+<div class="container">
+  <h1>Hello World</h1>
+  <p>This is a paragraph.</p>
+  <img src="image.jpg" alt="Description">
+</div>
+```
+
+### With Inline Styles
+
+```html
+<div style="color: red; font-size: 16px;">
+  <p>Styled content</p>
+</div>
+```
+
+### With Form Elements
+
+```html
+<form>
+  <label for="email">Email:</label>
+  <input type="email" id="email" name="email">
+  <button>Submit</button>
+</form>
+```
+
+## Output Format
+
+JSX with React-compatible syntax:
+
+```jsx
+<div className="container">
+  <h1>Hello World</h1>
+  <p>This is a paragraph.</p>
+  <img src="image.jpg" alt="Description" />
+</div>
+```
+
+## Transformations
+
+### Attribute Names
+
+| HTML | JSX |
+|------|-----|
+| `class` | `className` |
+| `for` | `htmlFor` |
+| `tabindex` | `tabIndex` |
+| `maxlength` | `maxLength` |
+| `readonly` | `readOnly` |
+| `colspan` | `colSpan` |
+| `rowspan` | `rowSpan` |
+| `accesskey` | `accessKey` |
+| `contenteditable` | `contentEditable` |
+
+### Self-Closing Tags
+
+```html
+<!-- HTML -->
+<img src="image.jpg">
+<br>
+<input type="text">
+```
+
+```jsx
+{/* JSX */}
+<img src="image.jpg" />
+<br />
+<input type="text" />
+```
+
+### Inline Styles
+
+```html
+<!-- HTML -->
+<div style="color: red; font-size: 16px;"></div>
+```
+
+```jsx
+{/* JSX */}
+<div style={{color: 'red', fontSize: '16px'}}></div>
+```
+
+## Examples
+
+<CodeGroup>
+```html Input: Basic HTML
+<div class="card">
+  <h2>Card Title</h2>
+  <p>Card description text.</p>
+  <button class="btn btn-primary">Click Me</button>
+</div>
+```
+
+```jsx Output
+<div className="card">
+  <h2>Card Title</h2>
+  <p>Card description text.</p>
+  <button className="btn btn-primary">Click Me</button>
+</div>
+```
+</CodeGroup>
+
+<CodeGroup>
+```html Input: Form Elements
+<form action="/submit" method="post">
+  <label for="username">Username:</label>
+  <input type="text" id="username" name="username" maxlength="20">
+  <label for="email">Email:</label>
+  <input type="email" id="email" name="email">
+  <button type="submit">Submit</button>
+</form>
+```
+
+```jsx Output
+<form action="/submit" method="post">
+  <label htmlFor="username">Username:</label>
+  <input type="text" id="username" name="username" maxLength="20" />
+  <label htmlFor="email">Email:</label>
+  <input type="email" id="email" name="email" />
+  <button type="submit">Submit</button>
+</form>
+```
+</CodeGroup>
+
+<CodeGroup>
+```html Input: With Inline Styles
+<div style="background-color: #f0f0f0; padding: 20px;">
+  <h3 style="color: #333; margin-bottom: 10px;">Styled Header</h3>
+  <p style="font-size: 14px; line-height: 1.5;">Styled paragraph.</p>
+</div>
+```
+
+```jsx Output
+<div style={{backgroundColor: '#f0f0f0', padding: '20px'}}>
+  <h3 style={{color: '#333', marginBottom: '10px'}}>Styled Header</h3>
+  <p style={{fontSize: '14px', lineHeight: '1.5'}}>Styled paragraph.</p>
+</div>
+```
+</CodeGroup>
+
+<CodeGroup>
+```html Input: Tables
+<table class="data-table">
+  <thead>
+    <tr>
+      <th colspan="2">Header</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Cell 1</td>
+      <td>Cell 2</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+```jsx Output
+<table className="data-table">
+  <thead>
+    <tr>
+      <th colSpan="2">Header</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Cell 1</td>
+      <td>Cell 2</td>
+    </tr>
+  </tbody>
+</table>
+```
+</CodeGroup>
+
+## Features
+
+- **Attribute Conversion**: Automatic transformation of HTML attributes to JSX props
+- **Self-Closing Tags**: Ensures all void elements use JSX self-closing syntax
+- **Style Object Conversion**: Transforms inline `style` strings to JSX style objects
+- **Preserved Structure**: Maintains document structure and nesting
+- **Comment Handling**: Converts HTML comments to JSX comment syntax
+- **Boolean Attributes**: Handles boolean attributes correctly (e.g., `disabled`, `checked`)
+
+## Common Issues
+
+### Event Handlers
+
+HTML event attributes are converted but need manual function assignment:
+
+```html
+<!-- Input -->
+<button onclick="handleClick()">Click</button>
+```
+
+```jsx
+{/* Output - requires manual function binding */}
+<button onClick="handleClick()">Click</button>
+
+{/* Correct usage */}
+<button onClick={handleClick}>Click</button>
+```
+
+### Data Attributes
+
+Data attributes remain unchanged:
+
+```jsx
+<div data-id="123" data-role="admin">Content</div>
+```
+
+## Implementation Details
+
+From `lib/tools/engine.ts:652-661`:
+
+```typescript
+case 'html-to-jsx': {
+  try {
+    const mod = await import('html-to-jsx');
+    const htmlToJsx = mod.default || mod;
+    if (typeof input !== 'string') throw new Error('Input must be a string');
+    return { output: htmlToJsx(String(input)) };
+  } catch (e: any) {
+    return { output: 'Conversion error: ' + e.message };
+  }
+}
+```
+
+<Note>
+Uses the `html-to-jsx` library for comprehensive HTML to JSX transformation. Handles edge cases and JSX-specific requirements automatically.
+</Note>
+
+<Tip>
+After conversion, review the output for:
+- Event handlers that need function references
+- Dynamic content that should use JSX expressions `{}`
+- Component imports and React-specific patterns
+</Tip>
+
+<Warning>
+The converter transforms syntax but doesn't create React components. You'll need to wrap the JSX in a component function and add necessary imports (`import React from 'react'`).
+</Warning>

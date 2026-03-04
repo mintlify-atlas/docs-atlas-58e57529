@@ -1,0 +1,431 @@
+---
+title: Adding New Tools
+description: Follow the 3-step process to add a new tool to Kayston's Forge
+---
+
+Adding a new tool to Kayston's Forge follows a consistent 3-step pattern. All tools share a unified UI and processing architecture.
+
+## The 3-Step Process
+
+To add a new tool, you must modify three key files:
+
+1. **Registry** (`lib/tools/registry.ts`) — Define the tool metadata
+2. **Engine** (`lib/tools/engine.ts`) — Implement the tool logic
+3. **Workbench Config** (`components/tools/ToolWorkbench.tsx`) — Configure actions (optional)
+
+## Step 1: Add to Registry
+
+The registry defines all tools with their metadata, icons, and keywords for search.
+
+<Steps>
+  <Step title="Open the registry file">
+    ```bash
+    # Location
+    lib/tools/registry.ts
+    ```
+  </Step>
+
+  <Step title="Add your tool definition">
+    Add a new entry to the `tools` array:
+
+    ```typescript
+    import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+
+    export const tools: ToolDefinition[] = [
+      // ... existing tools
+      {
+        id: 'my-new-tool',
+        name: 'My New Tool',
+        description: 'Brief description of what it does',
+        category: 'data', // encoding, escaping, preview, format, beautify, generator, data
+        icon: MagnifyingGlassIcon,
+        keywords: ['search', 'terms', 'for', 'command', 'palette']
+      },
+    ];
+    ```
+  </Step>
+</Steps>
+
+### Tool Categories
+
+Choose the appropriate category for your tool:
+
+| Category | Label | Use For |
+|----------|-------|----------|
+| `encoding` | Encoding & Encryption | Base64, JWT, timestamps, hashing |
+| `escaping` | Escaping & Entities | HTML entities, backslash escaping, IDs |
+| `preview` | Preview & Comparison | HTML preview, text diffing |
+| `format` | Format Converters | YAML/JSON, number bases, color formats |
+| `beautify` | Code Beautifiers | HTML/CSS/JS formatting |
+| `generator` | Generators | Lorem ipsum, QR codes, random strings |
+| `data` | Data Transformers | CSV/JSON conversion, SQL formatting |
+
+### Available Icons
+
+Icons come from `@heroicons/react/24/outline`. Common choices:
+
+```typescript
+import {
+  CodeBracketIcon,      // Code/JSON
+  DocumentTextIcon,     // Documents/text
+  HashtagIcon,          // Numbers/encoding
+  KeyIcon,              // Security/keys
+  LinkIcon,             // URLs/links
+  MagnifyingGlassIcon,  // Search/inspect
+  SparklesIcon,         // Generate/transform
+  TableCellsIcon,       // Tables/CSV
+} from '@heroicons/react/24/outline';
+```
+
+## Step 2: Implement in Engine
+
+The engine contains the processing logic for all tools in a large switch statement.
+
+<Steps>
+  <Step title="Open the engine file">
+    ```bash
+    # Location
+    lib/tools/engine.ts
+    ```
+  </Step>
+
+  <Step title="Add a case for your tool">
+    Add a new case to the `switch (toolId)` statement:
+
+    ```typescript
+    export async function processTool(
+      toolId: string,
+      input: string,
+      options: ProcessOptions = {}
+    ): Promise<ProcessResult> {
+      const action = options.action ?? 'default';
+
+      try {
+        switch (toolId) {
+          // ... existing cases
+
+          case 'my-new-tool': {
+            // Your processing logic here
+            const result = processInput(input);
+            
+            return {
+              output: result,
+              meta: 'Optional metadata',
+              // previewHtml: 'For HTML preview',
+              // previewDataUrl: 'For image preview',
+              // table: [{key: 'val'}], // For tabular data
+            };
+          }
+
+          default:
+            return { output: 'Tool not implemented.' };
+        }
+      } catch (error) {
+        return { output: error instanceof Error ? error.message : 'Processing failed.' };
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Processing Options
+
+Tools receive three parameters:
+
+```typescript
+processTool(
+  toolId: string,          // From registry
+  input: string,           // Primary input from textarea
+  options?: {
+    action?: string,       // Current action (e.g., 'beautify', 'minify')
+    secondInput?: string,  // Secondary input (for diff, compare, etc.)
+    dedupe?: boolean,      // Deduplication flag
+    pattern?: string,      // Regex pattern
+    flags?: string,        // Regex flags
+    [key: string]: unknown // Additional options
+  }
+)
+```
+
+### Return Value
+
+Return a `ProcessResult` object:
+
+```typescript
+interface ProcessResult {
+  output: string;           // Required: main output text
+  previewHtml?: string;     // Optional: HTML to render in preview pane
+  previewDataUrl?: string;  // Optional: image data URL for preview
+  table?: Array<Record<string, string>>; // Optional: tabular data
+  meta?: string;            // Optional: metadata shown below output
+}
+```
+
+### Example Implementations
+
+<CodeGroup>
+```typescript Simple Transformer
+case 'string-case': {
+  const words = input
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_\-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase());
+  
+  if (!words.length) return { output: '' };
+  
+  switch (action) {
+    case 'pascal': 
+      return { output: words.map((w) => w[0].toUpperCase() + w.slice(1)).join('') };
+    case 'snake': 
+      return { output: words.join('_') };
+    case 'kebab': 
+      return { output: words.join('-') };
+    default: 
+      return { output: words[0] + words.slice(1).map((w) => w[0].toUpperCase() + w.slice(1)).join('') };
+  }
+}
+```
+
+```typescript With Preview
+case 'markdown-preview': {
+  const { marked } = await import('marked');
+  const { default: DOMPurify } = await import('dompurify');
+  
+  const rawHtml = await marked.parse(input || '', { gfm: true });
+  const sanitized = DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a'],
+  });
+  
+  return { 
+    output: sanitized, 
+    previewHtml: sanitized 
+  };
+}
+```
+
+```typescript With Secondary Input
+case 'text-diff': {
+  const right = options.secondInput ?? '';
+  
+  if (action === 'patch') {
+    return { output: createPatch('input', input, right) };
+  }
+  
+  return {
+    output: diffLines(input, right)
+      .map((p) => `${p.added ? '+' : p.removed ? '-' : ' '} ${p.value}`)
+      .join('')
+      .trim(),
+  };
+}
+```
+</CodeGroup>
+
+## Step 3: Configure Actions (Optional)
+
+If your tool supports multiple actions (like Beautify/Minify), add action configuration to the workbench.
+
+<Steps>
+  <Step title="Open the workbench file">
+    ```bash
+    # Location
+    components/tools/ToolWorkbench.tsx
+    ```
+  </Step>
+
+  <Step title="Add to actionConfig">
+    Find the `actionConfig` object and add your tool:
+
+    ```typescript
+    const actionConfig: Record<string, { label: string; actions: Action[] }> = {
+      // ... existing configs
+      
+      'my-new-tool': {
+        label: 'Transform',
+        actions: [
+          { id: 'default', label: 'Default' },
+          { id: 'option-a', label: 'Option A' },
+          { id: 'option-b', label: 'Option B' },
+        ],
+      },
+    };
+    ```
+  </Step>
+</Steps>
+
+### Action Configuration Examples
+
+<CodeGroup>
+```typescript Format/Minify
+'html-beautify': {
+  label: 'Action',
+  actions: [
+    { id: 'default', label: 'Beautify' },
+    { id: 'minify', label: 'Minify' },
+  ],
+}
+```
+
+```typescript Encode/Decode
+'base64-string': {
+  label: 'Action',
+  actions: [
+    { id: 'default', label: 'Encode' },
+    { id: 'decode', label: 'Decode' },
+    { id: 'encode-url-safe', label: 'URL-Safe Encode' },
+  ],
+}
+```
+
+```typescript Multiple Options
+'hash-generator': {
+  label: 'Algorithm',
+  actions: [
+    { id: 'sha256', label: 'SHA-256' },
+    { id: 'sha512', label: 'SHA-512' },
+    { id: 'sha1', label: 'SHA-1' },
+    { id: 'md5', label: 'MD5' },
+    { id: 'hmac-sha256', label: 'HMAC-SHA256' },
+  ],
+}
+```
+</CodeGroup>
+
+<Warning>
+  If your tool doesn't need multiple actions, skip Step 3. The tool will work with the default action.
+</Warning>
+
+## Testing Your Tool
+
+After implementing your tool:
+
+<Steps>
+  <Step title="Write unit tests">
+    Add tests in `tests/unit/engine.test.ts`:
+
+    ```typescript
+    it('processes my new tool', async () => {
+      const out = await processTool('my-new-tool', 'test input', {
+        action: 'default',
+      });
+      expect(out.output).toBe('expected output');
+    });
+    ```
+  </Step>
+
+  <Step title="Run tests">
+    ```bash
+    npm run test
+    ```
+  </Step>
+
+  <Step title="Test in browser">
+    ```bash
+    npm run dev
+    ```
+    
+    Navigate to `/tools/my-new-tool` and verify:
+    - Tool appears in sidebar
+    - Actions work correctly
+    - Input/output behave as expected
+    - Command palette search finds the tool
+  </Step>
+
+  <Step title="Test static build">
+    ```bash
+    npm run build
+    ```
+    
+    Ensure the static export includes your new tool.
+  </Step>
+</Steps>
+
+## Advanced Patterns
+
+### Using Auxiliary Modules
+
+For complex logic, create a separate module:
+
+```typescript
+// lib/tools/my-tool-logic.ts
+export function processMyTool(input: string): string {
+  // Complex processing logic
+  return result;
+}
+
+// lib/tools/engine.ts
+import { processMyTool } from './my-tool-logic';
+
+case 'my-new-tool': {
+  const result = processMyTool(input);
+  return { output: result };
+}
+```
+
+### Dynamic Imports
+
+For large dependencies, use dynamic imports:
+
+```typescript
+case 'my-new-tool': {
+  const { heavyLibrary } = await import('heavy-library');
+  const result = heavyLibrary.process(input);
+  return { output: result };
+}
+```
+
+### Input Validation
+
+Always validate input:
+
+```typescript
+case 'my-new-tool': {
+  if (!input.trim()) {
+    return { output: 'Input is required' };
+  }
+  
+  try {
+    const parsed = JSON.parse(input);
+    // Process parsed data
+  } catch (error) {
+    return { output: `Parse error: ${error.message}` };
+  }
+}
+```
+
+## Static Export Compatibility
+
+Ensure your tool works with Next.js static export:
+
+- **No server-side APIs**: All processing must run client-side
+- **No Node.js APIs**: Use browser-compatible alternatives
+- **Synchronous preferred**: Avoid unnecessary async operations
+- **Bundle size**: Be mindful of dependency size
+
+<Warning>
+  Avoid using Node.js-specific APIs like `fs`, `path`, or `child_process`. These won't work in the browser.
+</Warning>
+
+## Checklist
+
+Before submitting your new tool:
+
+- [ ] Added to `lib/tools/registry.ts` with proper category and keywords
+- [ ] Implemented in `lib/tools/engine.ts` with error handling
+- [ ] Added action config to `components/tools/ToolWorkbench.tsx` (if needed)
+- [ ] Written unit tests in `tests/unit/engine.test.ts`
+- [ ] Tested in browser with `npm run dev`
+- [ ] Verified static build works with `npm run build`
+- [ ] All existing tests still pass
+- [ ] Tool appears in command palette search
+- [ ] Tool handles empty input gracefully
+- [ ] Tool handles invalid input with clear error messages
+
+## Next Steps
+
+- Learn about [testing strategies](/development/testing)
+- Understand [deployment process](/development/deployment)
+- Review existing tools in `lib/tools/engine.ts` for inspiration

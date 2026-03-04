@@ -1,0 +1,301 @@
+---
+title: Text Diff Checker
+description: Compare two text blocks line-by-line and generate unified diff patches
+---
+
+The **Text Diff Checker** compares two text inputs and highlights the differences between them. It's essential for code reviews, content comparison, debugging changes, and generating patches.
+
+## Use Cases
+
+- **Code reviews** - Compare original vs. modified code
+- **Document versioning** - Track changes between drafts
+- **Configuration audits** - Compare production vs. staging configs
+- **Debugging** - Identify unintended changes in output
+- **Patch generation** - Create unified diff patches for version control
+- **API response comparison** - Validate API changes between versions
+
+## How It Works
+
+The tool uses the **`diff` library** (same algorithm as Unix `diff`) to perform line-by-line comparison:
+
+- **Left Input:** Original text ("before")
+- **Right Input:** Modified text ("after")
+- **Output:** Color-coded diff showing additions, deletions, and unchanged lines
+
+<Note>
+  The tool compares text **line-by-line**, not character-by-character. For single-line changes, use a character-level diff tool or inspect the output carefully.
+</Note>
+
+## Actions
+
+### Default (Line Diff)
+
+Shows a simplified diff with markers:
+
+- `+` prefix: Lines added in the right input
+- `-` prefix: Lines removed from the left input
+- ` ` (space) prefix: Unchanged lines
+
+### Patch (Unified Diff)
+
+Generates a **unified diff patch** compatible with `git apply`, `patch`, and version control systems:
+
+```diff
+--- input
++++ input
+@@ -1,3 +1,3 @@
+ Line 1
+-Old line
++New line
+ Line 3
+```
+
+## Input Format
+
+**Left Input (Original):**
+
+```
+Hello World
+This is line 2
+Line 3 remains
+```
+
+**Right Input (Modified):**
+
+```
+Hello World
+This is line 2 (edited)
+Line 3 remains
+New line 4
+```
+
+## Output Format
+
+### Line Diff (Default)
+
+```
+  Hello World
+- This is line 2
++ This is line 2 (edited)
+  Line 3 remains
++ New line 4
+```
+
+### Unified Patch
+
+```diff
+--- input
++++ input
+@@ -1,3 +1,4 @@
+ Hello World
+-This is line 2
++This is line 2 (edited)
+ Line 3 remains
++New line 4
+```
+
+## Examples
+
+<CodeGroup>
+
+```text Code Comparison
+Left Input:
+function greet(name) {
+  console.log("Hello " + name);
+}
+
+Right Input:
+function greet(name) {
+  console.log(`Hello ${name}`);
+}
+
+Output (Line Diff):
+  function greet(name) {
+-   console.log("Hello " + name);
++   console.log(`Hello ${name}`);
+  }
+```
+
+```text JSON Comparison
+Left Input:
+{
+  "name": "John",
+  "age": 30,
+  "city": "New York"
+}
+
+Right Input:
+{
+  "name": "John",
+  "age": 31,
+  "city": "San Francisco"
+}
+
+Output (Line Diff):
+  {
+    "name": "John",
+-   "age": 30,
++   "age": 31,
+-   "city": "New York"
++   "city": "San Francisco"
+  }
+```
+
+```text Configuration File Diff
+Left Input:
+DATABASE_URL=postgres://localhost:5432/dev
+API_KEY=abc123
+DEBUG=true
+
+Right Input:
+DATABASE_URL=postgres://prod-db:5432/prod
+API_KEY=xyz789
+DEBUG=false
+LOG_LEVEL=info
+
+Output (Line Diff):
+- DATABASE_URL=postgres://localhost:5432/dev
++ DATABASE_URL=postgres://prod-db:5432/prod
+- API_KEY=abc123
++ API_KEY=xyz789
+- DEBUG=true
++ DEBUG=false
++ LOG_LEVEL=info
+```
+
+```text Patch Generation
+Left Input:
+README content line 1
+README content line 2
+
+Right Input:
+README content line 1
+README content line 2 (updated)
+New line 3
+
+Action: Patch
+
+Output (Unified Diff):
+--- input
++++ input
+@@ -1,2 +1,3 @@
+ README content line 1
+-README content line 2
++README content line 2 (updated)
++New line 3
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:486-495`
+</Info>
+
+The tool uses the **`diff` package (v8.0.3)** with two functions:
+
+### `diffLines` (Default Mode)
+
+Performs line-by-line comparison and returns an array of change objects:
+
+```typescript
+import { diffLines } from 'diff';
+
+const changes = diffLines(leftInput, rightInput);
+// Each change has: { value: string, added?: boolean, removed?: boolean }
+```
+
+### `createPatch` (Patch Mode)
+
+Generates a unified diff patch:
+
+```typescript
+import { createPatch } from 'diff';
+
+const patch = createPatch('input', leftInput, rightInput);
+// Returns a unified diff string compatible with `patch` command
+```
+
+### Performance
+
+- **Algorithm:** Myers' diff algorithm (O(ND) complexity, where N is input size and D is edit distance)
+- **Line-based comparison:** Fast for large files with localized changes
+- **Synchronous processing:** All operations run client-side
+
+<Warning>
+  Large inputs (10,000+ lines) may cause brief UI freezes. For massive files, consider chunking or using a dedicated diff service.
+</Warning>
+
+## Understanding Diff Output
+
+### Hunk Headers (Patch Mode)
+
+The `@@` lines indicate line ranges:
+
+```diff
+@@ -1,3 +1,4 @@
+```
+
+- `-1,3`: Original text starts at line 1, spans 3 lines
+- `+1,4`: Modified text starts at line 1, spans 4 lines
+
+### Context Lines
+
+Both modes show **3 lines of context** around changes by default (unchanged lines before/after the diff).
+
+## Common Patterns
+
+### Before/After Code Review
+
+```javascript
+// Before
+const sum = (a, b) => a + b;
+const result = sum(2, 3);
+
+// After
+const sum = (a, b) => a + b;
+const multiply = (a, b) => a * b;
+const result = multiply(2, 3);
+
+// Diff shows added `multiply` function and changed `sum` to `multiply` call
+```
+
+### Environment Config Comparison
+
+```bash
+# .env.development
+DATABASE_URL=localhost
+API_TIMEOUT=5000
+
+# .env.production
+DATABASE_URL=prod-db.example.com
+API_TIMEOUT=30000
+CACHE_TTL=3600
+```
+
+### Git Patch Application
+
+1. Generate patch with **Patch** action
+2. Save output to `changes.patch`
+3. Apply with `git apply changes.patch` or `patch < changes.patch`
+
+## Comparison with Other Tools
+
+| Feature | Text Diff | git diff | List Compare |
+|---------|-----------|----------|-------------|
+| **Line-by-line** | ✅ | ✅ | ❌ |
+| **Patch generation** | ✅ | ✅ | ❌ |
+| **Set operations** | ❌ | ❌ | ✅ |
+| **Fuzzy matching** | ❌ | ❌ | ✅ |
+| **Word-level diff** | ❌ | ✅ (--word-diff) | ❌ |
+
+<Info>
+  Use **Text Diff** for code and structured text. Use **[List Compare](/tools/list-compare)** for comparing lists of items (emails, IDs, etc.) with set operations.
+</Info>
+
+## Related Tools
+
+- [List Compare](/tools/list-compare) - Compare lists with intersection/union/diff
+- [JSON Format/Validate](/tools/json-format-validate) - Format JSON before diffing
+- [Line Sort/Dedupe](/tools/line-sort) - Sort lines before comparison

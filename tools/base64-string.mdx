@@ -1,0 +1,255 @@
+---
+title: Base64 String Encode/Decode
+description: Encode and decode UTF-8 text to/from Base64 with support for standard and URL-safe encoding formats
+---
+
+The Base64 String Encode/Decode tool handles bidirectional conversion between plain text and Base64-encoded strings. It supports both standard Base64 encoding and URL-safe variants, with proper UTF-8 handling for international characters.
+
+## Features
+
+- Standard Base64 encoding (RFC 4648)
+- URL-safe Base64 encoding (RFC 4648 Section 5)
+- UTF-8 character support
+- Automatic padding handling
+- URL-safe character substitution (`+` → `-`, `/` → `_`)
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="API Authentication" icon="key">
+    Encode credentials for Basic Authentication headers
+  </Card>
+  <Card title="URL Parameters" icon="link">
+    Safely encode data for inclusion in URLs using URL-safe variant
+  </Card>
+  <Card title="Data Transmission" icon="paper-plane">
+    Encode binary-safe text for transmission over text-only protocols
+  </Card>
+  <Card title="Email Encoding" icon="envelope">
+    Encode non-ASCII characters in email headers (MIME)
+  </Card>
+</CardGroup>
+
+## Actions
+
+### Default (Encode)
+
+Standard Base64 encoding with `+` and `/` characters:
+
+```
+hello world → aGVsbG8gd29ybGQ=
+```
+
+### Decode
+
+Decode Base64 back to plain text:
+
+```
+aGVsbG8gd29ybGQ= → hello world
+```
+
+### URL-Safe Encode
+
+Encode with URL-safe characters (no padding):
+
+```
+hello+world/test → aGVsbG8rd29ybGQvdGVzdA
+```
+
+<Note>
+  URL-safe encoding replaces `+` with `-`, `/` with `_`, and removes padding `=` characters.
+</Note>
+
+## Input Formats
+
+### Plain Text
+
+Any UTF-8 text including international characters:
+
+```
+Hello, 世界! 🌍
+```
+
+### Base64 String (for decoding)
+
+Standard or URL-safe Base64:
+
+```
+aGVsbG8gd29ybGQ=
+aGVsbG8gd29ybGQ  (without padding)
+aGVsbG8-d29ybGQ  (URL-safe)
+```
+
+## Examples
+
+<Tabs>
+  <Tab title="Encode Text">
+    Convert plain text to Base64.
+
+    **Input:**
+    ```
+    The quick brown fox jumps over the lazy dog
+    ```
+
+    **Output:**
+    ```
+    VGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZw==
+    ```
+  </Tab>
+
+  <Tab title="Decode Base64">
+    Convert Base64 back to plain text.
+
+    **Input:**
+    ```
+    SGVsbG8sIFdvcmxkIQ==
+    ```
+
+    **Output:**
+    ```
+    Hello, World!
+    ```
+  </Tab>
+
+  <Tab title="URL-Safe Encoding">
+    Encode for safe URL inclusion.
+
+    **Input:**
+    ```
+    user@example.com:password123
+    ```
+
+    **Standard Output:**
+    ```
+    dXNlckBleGFtcGxlLmNvbTpwYXNzd29yZDEyMw==
+    ```
+
+    **URL-Safe Output:**
+    ```
+    dXNlckBleGFtcGxlLmNvbTpwYXNzd29yZDEyMw
+    ```
+
+    <Note>
+      URL-safe variant removes `=` padding and uses `-_` instead of `+/`.
+    </Note>
+  </Tab>
+
+  <Tab title="UTF-8 Support">
+    Encode international characters.
+
+    **Input:**
+    ```
+    Héllo Wørld! 你好世界 🚀
+    ```
+
+    **Output:**
+    ```
+    SMOpbGxvIFfDuHJsZCEg5L2g5aW95LiW55WMLiDwn5qA
+    ```
+
+    **Decoded:**
+    ```
+    Héllo Wørld! 你好世界 🚀
+    ```
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+From `lib/tools/engine.ts:396-404`:
+
+```typescript
+case 'base64-string': {
+  if (action === 'decode') {
+    // Normalize URL-safe variants
+    const normalized = input.trim().replaceAll('-', '+').replaceAll('_', '/');
+    // Add padding if needed
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    return { output: decodeURIComponent(escape(atob(padded))) };
+  }
+  const encoded = btoa(unescape(encodeURIComponent(input)));
+  return { output: action === 'encode-url-safe' 
+    ? encoded.replaceAll('+', '-').replaceAll('/', '_').replaceAll(/=+$/g, '') 
+    : encoded };
+}
+```
+
+### UTF-8 Handling
+
+The tool uses a two-step encoding process for proper UTF-8 support:
+
+1. **Encode**: `text → encodeURIComponent → unescape → btoa`
+2. **Decode**: `base64 → atob → escape → decodeURIComponent`
+
+This ensures multi-byte UTF-8 characters are correctly encoded.
+
+## Common Patterns
+
+### Basic Authentication Header
+
+Encode credentials for HTTP Basic Auth:
+
+```javascript
+const credentials = "username:password";
+const encoded = btoa(credentials);
+const header = `Authorization: Basic ${encoded}`;
+// Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ=
+```
+
+### URL-Safe Token
+
+Create URL-safe tokens:
+
+```javascript
+const token = "session_data_with+special/chars";
+// Encode with URL-safe action
+// Result: c2Vzc2lvbl9kYXRhX3dpdGgrc3BlY2lhbC9jaGFycw (no padding)
+```
+
+### Data URLs
+
+Base64 is commonly used in data URLs (see [Base64 Image](/tools/base64-image) tool):
+
+```html
+data:text/plain;base64,SGVsbG8gV29ybGQh
+```
+
+## Padding Rules
+
+<Info>
+  **Standard Base64**: Always includes `=` padding to make length multiple of 4
+  
+  **URL-Safe**: Padding is optional and removed for cleaner URLs
+</Info>
+
+| Input Length | Padding |
+|--------------|----------|
+| `hello` (5) | `aGVsbG8=` (1 pad) |
+| `hello!` (6) | `aGVsbG8h` (no pad) |
+| `hello!!` (7) | `aGVsbG8hIQ==` (2 pads) |
+
+## Error Handling
+
+### Invalid Base64 Input
+
+If decoding fails, you'll see:
+
+```
+Invalid character in base64 string
+```
+
+### Common Issues
+
+- **Missing padding**: The decoder automatically adds padding
+- **URL-safe characters**: Automatically normalized during decode
+- **Whitespace**: Trimmed automatically
+
+<Warning>
+  Base64 increases data size by approximately 33%. The encoded output will be larger than the input text.
+</Warning>
+
+## Related Tools
+
+- [Base64 Image](/tools/base64-image) - Encode/decode image data URLs
+- [URL Encode/Decode](/tools/url-encode-decode) - URL percent encoding
+- [JWT Debugger](/tools/jwt-debugger) - Decode Base64-encoded JWT tokens

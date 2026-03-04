@@ -1,0 +1,645 @@
+---
+title: Dependency Security
+description: Automated security scanning, vulnerability management, and supply chain transparency for all npm dependencies
+---
+
+## Overview
+
+Kayston's Forge implements multiple layers of automated security scanning to detect and remediate vulnerabilities in dependencies. The application uses **npm audit**, **GitHub CodeQL**, **Dependabot**, **TruffleHog secret scanning**, and **SBOM generation** to maintain supply chain security.
+
+<Note>
+  All security scans run automatically on every push and pull request. Critical findings block merges until resolved.
+</Note>
+
+## CI/CD Security Pipeline
+
+The security pipeline is defined in `.github/workflows/security.yml` and runs on:
+
+- Every push to `main` branch
+- Every pull request
+- Weekly scheduled scans (Mondays at 08:00 UTC)
+- Manual workflow dispatch
+
+```yaml
+name: Security Checks
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Weekly full scan every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+```
+
+## npm audit
+
+### Configuration
+
+Dependency auditing runs on every build with **critical-only failure threshold**:
+
+```yaml
+# .github/workflows/security.yml
+- name: Run npm audit
+  # --audit-level=critical: next@14 and eslint-config-next glob are flagged
+  # HIGH for server-side features (RSC deserialization, Image Optimizer).
+  # This project uses output:'export' with images.unoptimized=true — those
+  # attack surfaces do not exist. Only CRITICAL findings block the build.
+  run: npm audit --audit-level=critical
+```
+
+<Warning>
+  The audit threshold is set to `critical` (not `high`) because Next.js 14 has HIGH severity advisories for server-side features that do not apply to static export builds.
+</Warning>
+
+### Why HIGH Advisories Don't Apply
+
+Next.js 14 has two known HIGH severity advisories:
+
+1. **GHSA-9g9p**: React Server Components deserialization vulnerability
+2. **GHSA-h25m**: Image Optimization API SSRF vulnerability
+
+**Why they're false positives for this project**:
+
+```javascript
+// next.config.js - Static export configuration
+const nextConfig = {
+  output: 'export',  // Disables server-side features entirely
+  images: {
+    unoptimized: true  // Disables Image Optimization API
+  }
+}
+```
+
+With `output: 'export'`:
+- No server runtime exists
+- No React Server Components
+- No Image Optimization API
+- No API routes or middleware
+- Pure static HTML, CSS, and JavaScript
+
+<Note>
+  This is documented in `CLAUDE.md:88` and `security.yml:27-31`. The advisory exclusion is **architecture-validated**, not ignored.
+</Note>
+
+### Running npm audit Locally
+
+```bash
+# Run critical-only audit (matches CI)
+npm audit --audit-level=critical
+
+# View all advisories including HIGH
+npm audit
+
+# Generate detailed audit report
+npm audit --json > audit-report.json
+
+# Fix all automatically patchable vulnerabilities
+npm audit fix
+```
+
+### Audit Workflow
+
+When npm audit detects vulnerabilities:
+
+1. **CRITICAL**: CI fails immediately, blocks all merges
+2. **HIGH**: Reviewed manually, excluded if not applicable to static export
+3. **MODERATE/LOW**: Tracked in issues, fixed in weekly dependency updates
+
+## GitHub CodeQL (SAST)
+
+### Configuration
+
+CodeQL performs static application security testing (SAST) on all TypeScript/JavaScript code:
+
+```yaml
+# .github/workflows/security.yml
+codeql:
+  name: CodeQL Static Analysis
+  runs-on: ubuntu-latest
+  permissions:
+    actions: read
+    contents: read
+    security-events: write
+  steps:
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: javascript-typescript
+        queries: security-extended
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v4
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: '/language:javascript-typescript'
+```
+
+### Query Suite: security-extended
+
+The `security-extended` query suite includes:
+
+- **CWE Coverage**: 150+ security-relevant code patterns
+- **Common Vulnerabilities**: XSS, SQL injection, path traversal, etc.
+- **JavaScript/TypeScript Specific**: Prototype pollution, unsafe regex, eval usage
+- **Framework Patterns**: React-specific security issues
+
+<Note>
+  CodeQL results are visible in the **Security → Code scanning alerts** tab of the GitHub repository.
+</Note>
+
+### Example Detections
+
+CodeQL catches issues like:
+
+```typescript
+// ❌ Unsafe: Direct innerHTML assignment
+element.innerHTML = userInput
+
+// ✅ Safe: React JSX escaping
+return <div>{userInput}</div>
+
+// ❌ Unsafe: eval with user input
+eval(code)
+
+// ✅ Safe: Function constructor (still avoid, but safer)
+new Function(code)()
+
+// ❌ Unsafe: RegExp denial of service
+const regex = new RegExp('(a+)+$')
+regex.test(longString)  // Can hang for exponential time
+
+// ✅ Safe: Non-backtracking regex
+const regex = /^[a-z0-9]+$/
+```
+
+### False Positive Handling
+
+If CodeQL flags a false positive:
+
+1. Add a comment explaining why it's safe:
+   ```typescript
+   // CodeQL [security/unsafe-html]: Sanitized via DOMPurify
+   element.innerHTML = DOMPurify.sanitize(userInput)
+   ```
+
+2. Dismiss the alert in GitHub Security tab with justification
+
+3. Document architectural mitigations (e.g., sandboxed iframes)
+
+## TruffleHog Secret Scanning
+
+### Configuration
+
+TruffleHog scans for leaked secrets (API keys, passwords, tokens) in git history:
+
+```yaml
+# .github/workflows/security.yml
+secret-scan:
+  name: Secret Scanning
+  runs-on: ubuntu-latest
+  steps:
+    - name: TruffleHog secret scan (verified)
+      uses: trufflesecurity/trufflehog@648aca62d5437454d477426fb20c29f402c06a4e
+      with:
+        path: ./
+        base: ${{ github.event.before || github.sha }}
+        head: ${{ github.sha }}
+        extra_args: --only-verified
+
+    - name: TruffleHog secret scan (unverified high-confidence)
+      uses: trufflesecurity/trufflehog@648aca62d5437454d477426fb20c29f402c06a4e
+      continue-on-error: true
+      with:
+        path: ./
+        base: ${{ github.event.before || github.sha }}
+        head: ${{ github.sha }}
+```
+
+### Two-Pass Scanning
+
+1. **Verified Secrets** (blocks CI):
+   - API keys that TruffleHog confirms are valid via test requests
+   - AWS credentials, GitHub tokens, Stripe keys, etc.
+   - **Action**: Build fails immediately
+
+2. **Unverified High-Confidence** (warning only):
+   - Pattern matches that look like secrets but aren't verified
+   - Potential false positives
+   - **Action**: Warning logged, doesn't block build
+
+<Warning>
+  If verified secrets are detected, **immediately rotate all credentials** and force-push with `git rebase` to remove from history (if not yet pushed to public repo).
+</Warning>
+
+### Common False Positives
+
+```javascript
+// ❌ False positive: Test JWT
+const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+// ✅ Excluded: Add to .trufflehogignore or use placeholder
+const mockToken = 'eyJhbGc_REDACTED_'
+```
+
+### Excluded Patterns
+
+TruffleHog automatically excludes:
+- Package lock files (`package-lock.json`)
+- Dependency directories (`node_modules/`)
+- Build outputs (`out/`, `.next/`)
+- Test fixtures with intentionally fake secrets
+
+## Dependabot
+
+### Configuration
+
+Dependabot automatically opens pull requests for dependency updates:
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    rebase-strategy: "disabled"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+    ignore:
+      # Review major version bumps manually
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # Group all minor/patch updates into a single weekly PR
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    rebase-strategy: "disabled"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+      - "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+```
+
+### Update Strategy
+
+| Update Type | Behavior | Rationale |
+|-------------|----------|----------|
+| **CRITICAL security fix** | Opens individual PR immediately | Urgent, must review and merge ASAP |
+| **Minor/patch updates** | Grouped into single weekly PR | Reduces PR noise, easier to review batch |
+| **Major version bumps** | Ignored by Dependabot | Breaking changes require manual review |
+| **GitHub Actions** | Grouped into single weekly PR | Lower risk, batch updates |
+
+<Note>
+  Dependabot PRs automatically trigger the full security pipeline (npm audit, CodeQL, TruffleHog, SBOM generation) before merge.
+</Note>
+
+### Reviewing Dependabot PRs
+
+When reviewing dependency update PRs:
+
+1. **Check CI Results**: All security checks must pass (green checkmarks)
+2. **Review Changelog**: Click through to dependency's release notes/changelog
+3. **Test Locally**: Pull branch and run `npm run build && npm run test`
+4. **Check Bundle Size**: Verify no unexpected size increases (use `npm run analyze` if available)
+5. **Merge Strategy**: Squash-merge to keep main branch history clean
+
+### Ignoring False Positive Alerts
+
+If Dependabot opens a security PR for a non-applicable vulnerability:
+
+```bash
+# Mark advisory as dismissed in GitHub UI
+# Security → Dependabot alerts → Dismiss → Reason: "Not applicable to static export"
+```
+
+Or add to `.github/dependabot.yml`:
+
+```yaml
+ignore:
+  - dependency-name: "next"
+    update-types: ["version-update:semver-minor"]
+    # Reason: Waiting for feature X in next major version
+```
+
+## SBOM Generation
+
+### Configuration
+
+Software Bill of Materials (SBOM) is generated automatically on every release:
+
+```yaml
+# .github/workflows/sbom.yml
+name: Generate SBOM
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  sbom:
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate SBOM (JSON)
+        run: npx --yes @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.json
+          retention-days: 90
+
+      - name: Attach SBOM to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.json
+```
+
+### SBOM Format: CycloneDX
+
+The SBOM is generated in **CycloneDX 1.5 JSON** format, which includes:
+
+- **Component Inventory**: All npm dependencies (direct and transitive)
+- **Version Information**: Exact versions from `package-lock.json`
+- **License Data**: SPDX license identifiers
+- **Dependency Graph**: Parent-child relationships
+- **Hashes**: SHA-512 checksums for verification
+- **Vulnerability Data**: Known CVEs (if available)
+
+<Note>
+  CycloneDX is one of two industry-standard SBOM formats (the other is SPDX). It's optimized for security use cases and vulnerability tracking.
+</Note>
+
+### Example SBOM Structure
+
+```json
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "kaystons-forge",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "next",
+      "version": "14.2.3",
+      "purl": "pkg:npm/next@14.2.3",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "hashes": [{"alg": "SHA-512", "content": "..."}]
+    },
+    // ... all 200+ dependencies
+  ],
+  "dependencies": [
+    {"ref": "pkg:npm/next@14.2.3", "dependsOn": ["pkg:npm/react@18.2.0"]}
+  ]
+}
+```
+
+### Accessing SBOMs
+
+1. **GitHub Releases**: Download `sbom.json` from any release page
+2. **GitHub Actions Artifacts**: Download from workflow runs (90-day retention)
+3. **Generate Locally**:
+   ```bash
+   npm ci
+   npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom.json
+   ```
+
+### SBOM Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| **Vulnerability Tracking** | Cross-reference against CISA KEV catalog |
+| **License Compliance** | Audit all transitive dependency licenses |
+| **Supply Chain Security** | Detect malicious package injections |
+| **Incident Response** | Quickly determine if vulnerable package is in use |
+| **Procurement** | Provide to customers for their security audits |
+
+<Note>
+  SBOMs are increasingly **required for federal procurement** (NIST SSDF, EO 14028) and enterprise security questionnaires.
+</Note>
+
+### SBOM Vulnerability Analysis
+
+To check SBOM against known vulnerabilities:
+
+```bash
+# Using OWASP Dependency-Track
+curl -X POST 'https://dependency-track.example.com/api/v1/bom' \
+  -H 'X-API-Key: YOUR_KEY' \
+  -H 'Content-Type: application/json' \
+  -d @sbom.json
+
+# Using Grype (open-source)
+grype sbom:./sbom.json
+```
+
+## Vulnerability Management Process
+
+### Severity Levels
+
+| Severity | SLA | Action |
+|----------|-----|--------|
+| **CRITICAL** | 24 hours | Hotfix branch, emergency release |
+| **HIGH** | 7 days | Scheduled patch release |
+| **MODERATE** | 30 days | Bundled into next minor release |
+| **LOW** | 90 days | Tracked in backlog |
+
+### Vulnerability Response Workflow
+
+1. **Detection**: Automated alert from npm audit, Dependabot, or CodeQL
+2. **Triage**: Security team reviews within 24 hours
+3. **Assessment**: Determine applicability to static export architecture
+4. **Remediation**:
+   - **Patch available**: Dependabot PR → review → merge
+   - **No patch**: Evaluate workarounds or dependency replacement
+   - **Not applicable**: Document rationale, dismiss alert
+5. **Verification**: Re-run security pipeline after fix
+6. **Disclosure**: Update security advisories if user-facing
+
+<Warning>
+  Zero-day vulnerabilities with active exploitation are treated as CRITICAL regardless of npm audit severity level.
+</Warning>
+
+### Tracking Known Vulnerabilities
+
+Current known issues (as of documentation date):
+
+| Dependency | Advisory | Severity | Status | Rationale |
+|------------|----------|----------|--------|----------|
+| `next@14.x` | GHSA-9g9p | HIGH | Dismissed | RSC feature not used in static export |
+| `next@14.x` | GHSA-h25m | HIGH | Dismissed | Image Optimizer disabled (`unoptimized: true`) |
+
+<Note>
+  This table is maintained in `docs/SECURITY.md` and reviewed quarterly.
+</Note>
+
+## Supply Chain Security Best Practices
+
+Lessons learned from this implementation:
+
+### 1. Lockfile Discipline
+
+Always commit `package-lock.json`:
+
+```bash
+# ✅ Ensures reproducible builds
+git add package-lock.json
+
+# ❌ Never delete lockfile to "fix" install issues
+git rm package-lock.json  # DON'T DO THIS
+```
+
+### 2. Minimize Dependencies
+
+Every dependency is a potential vulnerability:
+
+- Audit new dependencies before adding (`npm audit`, check GitHub stars/maintenance)
+- Prefer stdlib or built-in browser APIs over packages
+- Regularly review `package.json` for unused dependencies
+
+### 3. Pin GitHub Actions
+
+Use commit SHAs, not tags:
+
+```yaml
+# ✅ Pinned to specific commit
+- uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v6.0.0
+
+# ❌ Vulnerable to tag tampering
+- uses: actions/checkout@v6
+```
+
+### 4. Review Transitive Dependencies
+
+Most vulnerabilities are in **transitive** (indirect) dependencies:
+
+```bash
+# View full dependency tree
+npm ls
+
+# Find which package depends on a vulnerable package
+npm ls <vulnerable-package>
+
+# Force update transitive dependency
+npm update <parent-package>
+```
+
+### 5. Automated vs. Manual Updates
+
+| Update Type | Strategy |
+|-------------|----------|
+| Security patches | Automated (Dependabot) |
+| Minor/patch updates | Automated (Dependabot) |
+| Major version bumps | Manual review + testing |
+| Breaking changes | Manual migration + documentation |
+
+## Integration with Other Security Measures
+
+Dependency security is one layer of defense-in-depth:
+
+### Runtime Security
+
+- **CSP**: Blocks malicious scripts even if dependency is compromised
+- **Subresource Integrity (SRI)**: Planned for CDN assets
+
+### Development Security
+
+- **Pre-commit hooks**: Run `npm audit` before allowing commits
+- **PR templates**: Checklist includes "dependencies reviewed"
+
+### Incident Response
+
+- **SBOM availability**: Rapid vulnerability assessment during incidents
+- **Rollback plan**: Previous releases remain available with SBOMs
+
+## Continuous Improvement
+
+Future enhancements under consideration:
+
+### 1. SBOM Vulnerability Monitoring
+
+Automate SBOM uploads to vulnerability tracking platforms:
+- OWASP Dependency-Track
+- GitHub Dependency Graph
+- Snyk/Sonatype/JFrog Xray
+
+### 2. Reproducible Builds
+
+Generate and verify build provenance:
+```bash
+# SLSA Level 3 provenance
+npx @sigstore/cosign sign-blob sbom.json
+```
+
+### 3. License Compliance Automation
+
+Automate license auditing:
+```bash
+npx license-checker --production --excludePrivatePackages
+```
+
+### 4. Dependency Review Action
+
+Add GitHub's dependency review action to PRs:
+```yaml
+- uses: actions/dependency-review-action@v4
+  with:
+    fail-on-severity: moderate
+```
+
+## Conclusion
+
+Kayston's Forge implements a comprehensive dependency security program combining:
+
+- **Automated scanning**: npm audit, CodeQL, TruffleHog
+- **Continuous monitoring**: Dependabot weekly updates
+- **Supply chain transparency**: CycloneDX SBOM generation
+- **Documented exceptions**: Architecture-validated advisory dismissals
+
+<Note>
+  All security tooling is configured in version control (`.github/workflows/`) and runs automatically. No manual intervention is required for routine scans.
+</Note>
+
+For vulnerability reports or questions about dependency security, contact security@kaystons.dev.

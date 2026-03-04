@@ -1,0 +1,289 @@
+---
+title: Color Converter
+description: Convert colors between HEX, RGB, RGBA, HSL, HSLA, and HSV formats
+---
+
+The **Color Converter** transforms color values between multiple formats: HEX, RGB/RGBA, HSL/HSLA, and HSV/HSVA. It's essential for web development, design work, and working with different color systems.
+
+## Use Cases
+
+- **CSS color conversion** - Switch between hex, rgb(), hsl() for stylesheets
+- **Design handoff** - Convert designer hex codes to RGB for programming
+- **Color manipulation** - Adjust hue, saturation, lightness in HSL/HSV
+- **Accessibility** - Convert colors to check contrast ratios
+- **Theme generation** - Create color palettes in different formats
+- **Cross-platform development** - Use RGB for Android, hex for iOS/web
+
+## Supported Formats
+
+### HEX (Hexadecimal)
+
+- **3-digit:** `#f00` (shorthand for `#ff0000`)
+- **4-digit:** `#f00a` (with alpha)
+- **6-digit:** `#ff0000` (standard)
+- **8-digit:** `#ff0000aa` (with alpha)
+
+### RGB/RGBA (Red, Green, Blue, Alpha)
+
+- `rgb(255, 0, 0)` (opaque red)
+- `rgba(255, 0, 0, 0.5)` (50% transparent red)
+
+### HSL/HSLA (Hue, Saturation, Lightness, Alpha)
+
+- `hsl(0, 100%, 50%)` (pure red)
+- `hsla(0, 100%, 50%, 0.5)` (50% transparent red)
+
+### HSV/HSVA (Hue, Saturation, Value, Alpha)
+
+- `hsv(0, 100%, 100%)` (pure red)
+- `hsva(0, 100%, 100%, 0.5)` (50% transparent red)
+
+<Note>
+  The tool automatically handles alpha (transparency) values. If alpha is 1.0 (fully opaque), the output uses 3/6-digit hex and rgb/hsl/hsv notation. If alpha < 1.0, it outputs 8-digit hex and rgba/hsla/hsva notation.
+</Note>
+
+## Input Format
+
+Paste any of these formats:
+
+```
+#ff0000
+rgb(255, 0, 0)
+rgba(255, 0, 0, 0.5)
+hsl(0, 100%, 50%)
+hsla(0, 100%, 50%, 0.5)
+hsv(0, 100%, 100%)
+```
+
+## Output Format
+
+### Default (All Formats)
+
+Shows all conversions plus CSS variable examples:
+
+```
+HEX:  #ff0000
+RGB:  rgb(255, 0, 0)
+HSL:  hsl(0, 100%, 50%)
+HSV:  hsv(0, 100%, 100%)
+
+--color: #ff0000;
+--color-rgb: 255, 0, 0;
+```
+
+### Action-Specific Outputs
+
+- **to-hex:** `#ff0000` or `#ff0000aa` (with alpha)
+- **to-rgb:** `rgb(255, 0, 0)` or `rgba(255, 0, 0, 0.5)`
+- **to-hsl:** `hsl(0, 100%, 50%)` or `hsla(0, 100%, 50%, 0.5)`
+- **to-hsv:** `hsv(0, 100%, 100%)` or `hsva(0, 100%, 100%, 0.5)`
+
+## Examples
+
+<CodeGroup>
+
+```text Hex to RGB
+Input:
+#3498db
+
+Output:
+HEX:  #3498db
+RGB:  rgb(52, 152, 219)
+HSL:  hsl(204, 70%, 53%)
+HSV:  hsv(204, 76%, 86%)
+
+--color: #3498db;
+--color-rgb: 52, 152, 219;
+```
+
+```text RGB to HSL
+Input:
+rgb(255, 87, 51)
+
+Output:
+HEX:  #ff5733
+RGB:  rgb(255, 87, 51)
+HSL:  hsl(11, 100%, 60%)
+HSV:  hsv(11, 80%, 100%)
+
+--color: #ff5733;
+--color-rgb: 255, 87, 51;
+```
+
+```text HSL to All
+Input:
+hsl(120, 100%, 50%)
+
+Output:
+HEX:  #00ff00
+RGB:  rgb(0, 255, 0)
+HSL:  hsl(120, 100%, 50%)
+HSV:  hsv(120, 100%, 100%)
+
+--color: #00ff00;
+--color-rgb: 0, 255, 0;
+```
+
+```text Transparent Color (RGBA)
+Input:
+rgba(255, 0, 0, 0.5)
+
+Output:
+HEX:  #ff000080
+RGB:  rgba(255, 0, 0, 0.5)
+HSL:  hsla(0, 100%, 50%, 0.5)
+HSV:  hsva(0, 100%, 100%, 0.5)
+
+--color: #ff000080;
+--color-rgb: 255, 0, 0;
+```
+
+```text Short Hex to Full
+Input:
+#f03
+
+Output:
+HEX:  #ff0033
+RGB:  rgb(255, 0, 51)
+HSL:  hsl(348, 100%, 50%)
+HSV:  hsv(348, 100%, 100%)
+
+--color: #ff0033;
+--color-rgb: 255, 0, 51;
+```
+
+</CodeGroup>
+
+## Technical Details
+
+<Info>
+  Located in `lib/tools/engine.ts:823-901`
+</Info>
+
+The tool implements full color space conversions:
+
+### Parsing Input
+
+1. **Hex detection:** Regex `#?([0-9a-f]{3,8})`
+2. **RGB detection:** Regex `rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)`
+3. **HSL detection:** Regex `hsla?\(([\d.]+),\s*([\d.]+)%?,\s*([\d.]+)%?(?:,\s*([\d.]+))?\)`
+
+### Color Space Conversion Algorithms
+
+#### HSL to RGB
+
+Uses the standard hue-to-RGB algorithm:
+
+```typescript
+function hue2rgb(p: number, q: number, t: number) {
+  if (t < 1/6) return p + (q - p) * 6 * t;
+  if (t < 1/2) return q;
+  if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+  return p;
+}
+```
+
+#### RGB to HSL
+
+```typescript
+const max = Math.max(r, g, b);
+const min = Math.min(r, g, b);
+const l = (max + min) / 2;
+const s = max === min ? 0 : l > 0.5 ? d / (2 - max - min) : d / (max + min);
+// Hue calculation based on which component is max
+```
+
+#### RGB to HSV
+
+```typescript
+const max = Math.max(r, g, b);
+const min = Math.min(r, g, b);
+const v = max;
+const s = max === 0 ? 0 : (max - min) / max;
+// Hue calculation (same as HSL)
+```
+
+### Alpha Channel Handling
+
+- **Opaque (alpha = 1.0):** Outputs standard formats
+- **Transparent (alpha < 1.0):** Adds alpha to all formats
+- **8-digit hex:** Alpha is in range 00-FF (0-255)
+
+## Understanding Color Spaces
+
+### RGB (Additive Color)
+
+- **Range:** R, G, B each 0-255
+- **Use case:** Screens, monitors, digital images
+- **Example:** `rgb(255, 0, 0)` = pure red (all red, no green/blue)
+
+### HSL (Human-Friendly)
+
+- **Hue (0-360°):** Color wheel position (0=red, 120=green, 240=blue)
+- **Saturation (0-100%):** Color intensity (0=gray, 100=pure color)
+- **Lightness (0-100%):** Brightness (0=black, 50=normal, 100=white)
+- **Use case:** Adjusting colors ("make it lighter", "less saturated")
+
+### HSV (Artist-Friendly)
+
+- **Hue (0-360°):** Same as HSL
+- **Saturation (0-100%):** Color purity (0=white, 100=pure color)
+- **Value (0-100%):** Brightness (0=black, 100=bright)
+- **Use case:** Color pickers, painting applications
+
+<Note>
+  **HSL vs HSV:** Both use the same hue wheel, but differ in how they represent saturation and brightness. HSL's lightness goes from black → color → white. HSV's value goes from black → color (no white endpoint).
+</Note>
+
+## CSS Variable Output
+
+The tool generates ready-to-use CSS custom properties:
+
+```css
+:root {
+  --color: #3498db;           /* Use directly */
+  --color-rgb: 52, 152, 219;  /* Use with rgba() */
+}
+
+.element {
+  background: var(--color);
+  box-shadow: 0 2px 8px rgba(var(--color-rgb), 0.3);
+}
+```
+
+## Common Patterns
+
+### Lightening a Color
+
+1. Convert to HSL: `hsl(204, 70%, 53%)`
+2. Increase lightness: `hsl(204, 70%, 73%)` (+20%)
+3. Convert back to hex: `#72b3e6`
+
+### Desaturating a Color
+
+1. Convert to HSL: `hsl(0, 100%, 50%)`
+2. Reduce saturation: `hsl(0, 50%, 50%)` (50% sat)
+3. Convert back: `#bf4040` (muted red)
+
+### Adjusting Opacity
+
+1. Convert to RGBA: `rgba(255, 0, 0, 1.0)`
+2. Change alpha: `rgba(255, 0, 0, 0.5)`
+3. Convert to 8-digit hex: `#ff000080`
+
+### Color Palettes
+
+Generate shades by adjusting HSL lightness:
+
+```
+Base: hsl(204, 70%, 53%)
+
+Lighter: hsl(204, 70%, 63%) → #5eb3e6
+Darker:  hsl(204, 70%, 43%) → #2980b9
+```
+
+## Related Tools
+
+- [Number Base Converter](/tools/number-base) - Convert hex to decimal (for color components)
+- [SVG to CSS](/tools/svg-to-css) - Embed SVG with color codes in CSS
+- [CSS Beautify/Minify](/tools/css-beautify) - Format CSS with color values

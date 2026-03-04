@@ -1,0 +1,522 @@
+---
+title: Deployment
+description: Build and deploy Kayston's Forge as a static site to Vercel or other hosting platforms
+---
+
+Kayston's Forge is built as a fully static Next.js application with `output: 'export'`. This makes it compatible with any static hosting platform and ensures complete client-side privacy.
+
+## Static Export Architecture
+
+The application uses Next.js static export mode configured in `next.config.mjs`:
+
+```javascript
+const nextConfig = {
+  output: 'export',              // Generate static HTML/CSS/JS
+  images: {
+    unoptimized: true,           // Required for static export
+  },
+  experimental: {
+    optimizePackageImports: ['@heroicons/react'],
+  },
+};
+```
+
+### What This Means
+
+- **No server required**: All pages are pre-rendered as HTML
+- **No API routes**: All processing happens client-side
+- **No dynamic routes**: Tool pages are generated via `generateStaticParams()`
+- **PWA-ready**: Service worker and manifest for offline support
+
+## Building for Production
+
+<Steps>
+  <Step title="Run the build command">
+    ```bash
+    npm run build
+    ```
+
+    This command:
+    - Compiles TypeScript to JavaScript
+    - Bundles React components
+    - Generates static HTML for all tool pages
+    - Optimizes CSS with Tailwind
+    - Creates the `out/` directory
+  </Step>
+
+  <Step title="Verify the output">
+    ```bash
+    ls out/
+    ```
+
+    You should see:
+    ```
+    out/
+    ├── _next/           # Optimized JS/CSS bundles
+    ├── tools/           # Static tool pages
+    │   ├── json-format-validate.html
+    │   ├── base64-string.html
+    │   └── ... (47 tools)
+    ├── index.html       # Root redirect
+    ├── manifest.json    # PWA manifest
+    ├── sw.js            # Service worker
+    └── favicon.svg
+    ```
+  </Step>
+
+  <Step title="Test locally (optional)">
+    Serve the static files locally to verify:
+
+    ```bash
+    npx serve out
+    ```
+
+    Or use any static file server:
+
+    ```bash
+    python3 -m http.server 3000 --directory out
+    ```
+  </Step>
+</Steps>
+
+## Deploying to Vercel
+
+Vercel provides the simplest deployment experience for Next.js applications.
+
+### Automatic Deployment
+
+<Steps>
+  <Step title="Connect to GitHub">
+    1. Push your code to GitHub
+    2. Visit [vercel.com](https://vercel.com)
+    3. Click "New Project"
+    4. Import your repository
+  </Step>
+
+  <Step title="Configure project">
+    Vercel auto-detects Next.js. No configuration needed:
+
+    - **Framework Preset**: Next.js
+    - **Build Command**: `npm run build`
+    - **Output Directory**: `out` (auto-detected)
+  </Step>
+
+  <Step title="Deploy">
+    Click "Deploy" and wait for the build to complete.
+    
+    Vercel will:
+    - Install dependencies
+    - Run `npm run build`
+    - Deploy the `out/` directory to CDN
+    - Provide a production URL
+  </Step>
+
+  <Step title="Configure custom domain (optional)">
+    In Vercel dashboard:
+    1. Go to Project Settings → Domains
+    2. Add your custom domain
+    3. Update DNS records as instructed
+  </Step>
+</Steps>
+
+### Manual Deployment
+
+Deploy from the command line:
+
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Build the project
+npm run build
+
+# Deploy
+vercel --prod
+```
+
+### Vercel Configuration
+
+The project includes `vercel.json` with security headers:
+
+```json
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Deploying to Other Platforms
+
+The static export works with any static hosting provider:
+
+<CodeGroup>
+```bash Netlify
+# Build
+npm run build
+
+# Deploy
+netlify deploy --prod --dir=out
+```
+
+```bash Cloudflare Pages
+# Build
+npm run build
+
+# Deploy
+wrangler pages deploy out
+```
+
+```bash AWS S3 + CloudFront
+# Build
+npm run build
+
+# Sync to S3
+aws s3 sync out/ s3://your-bucket-name --delete
+
+# Invalidate CloudFront cache
+aws cloudfront create-invalidation \
+  --distribution-id YOUR_DIST_ID \
+  --paths "/*"
+```
+
+```bash GitHub Pages
+# Build
+npm run build
+
+# Deploy with gh-pages
+npx gh-pages -d out
+```
+
+```bash Self-Hosted (Nginx)
+# Build
+npm run build
+
+# Copy to web root
+sudo cp -r out/* /var/www/html/
+
+# Nginx config
+server {
+  listen 80;
+  server_name yourdomain.com;
+  root /var/www/html;
+  index index.html;
+  
+  location / {
+    try_files $uri $uri.html $uri/ =404;
+  }
+}
+```
+</CodeGroup>
+
+## Build Configuration
+
+### Environment Variables
+
+For build-time configuration, use `.env.local`:
+
+```bash
+# .env.local
+NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_ANALYTICS_ID=UA-XXXXX
+```
+
+Access in code:
+
+```typescript
+const version = process.env.NEXT_PUBLIC_APP_VERSION;
+```
+
+<Warning>
+  Only variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Never put secrets in environment variables for static sites.
+</Warning>
+
+### Build Optimization
+
+The current bundle size is ~513 kB. Optimization strategies:
+
+#### 1. Dynamic Imports
+
+Replace static imports with dynamic imports for large dependencies:
+
+```typescript
+// Before (loads on every page)
+import { marked } from 'marked';
+
+// After (loads only when needed)
+case 'markdown-preview': {
+  const { marked } = await import('marked');
+  // Use marked...
+}
+```
+
+#### 2. Code Splitting
+
+Split tool logic into separate chunks:
+
+```javascript
+// next.config.mjs
+const nextConfig = {
+  output: 'export',
+  experimental: {
+    optimizePackageImports: [
+      '@heroicons/react',
+      'crypto-js',
+      'terser',
+    ],
+  },
+};
+```
+
+#### 3. Remove Unused Dependencies
+
+Regularly audit dependencies:
+
+```bash
+npx depcheck
+```
+
+## Build Troubleshooting
+
+### Build Fails with "Error: Dynamic Code Evaluation"
+
+Some libraries use `eval()` which doesn't work in static export:
+
+```typescript
+// Solution: Use minify_sync instead of minify
+const { minify_sync } = await import('terser');
+const result = minify_sync(code);
+```
+
+### Build Fails with "Error: Image Optimization"
+
+Next.js Image Optimization requires a server. Use `unoptimized: true`:
+
+```javascript
+// next.config.mjs
+images: {
+  unoptimized: true,
+}
+```
+
+### Build Succeeds but Pages 404
+
+Ensure `generateStaticParams()` returns all tool IDs:
+
+```typescript
+// app/tools/[toolId]/page.tsx
+export function generateStaticParams() {
+  return tools.map((tool) => ({
+    toolId: tool.id,
+  }));
+}
+```
+
+### Large Bundle Size Warning
+
+Next.js warns if bundles exceed 244 kB. For this app, it's expected:
+
+```
+Warning: First Load JS shared by all: 513 kB
+```
+
+To reduce:
+- Use dynamic imports for heavy dependencies
+- Split tools into separate route groups
+- Remove unused dependencies
+
+## Deployment Checklist
+
+<Steps>
+  <Step title="Pre-deployment checks">
+    - [ ] All tests pass (`npm run test`)
+    - [ ] Linting passes (`npm run lint`)
+    - [ ] Build succeeds (`npm run build`)
+    - [ ] Security audit passes (`npm run audit`)
+    - [ ] Static export works locally (`npx serve out`)
+  </Step>
+
+  <Step title="Security verification">
+    - [ ] `vercel.json` has security headers
+    - [ ] No secrets in environment variables
+    - [ ] Content Security Policy configured
+    - [ ] HTTPS enforced in production
+  </Step>
+
+  <Step title="Performance verification">
+    - [ ] Bundle size is acceptable
+    - [ ] Service worker caches assets
+    - [ ] PWA manifest is valid
+    - [ ] Images are optimized
+  </Step>
+
+  <Step title="Functionality verification">
+    - [ ] All tools work in production
+    - [ ] Command palette search works
+    - [ ] Keyboard shortcuts work
+    - [ ] History saves/restores correctly
+    - [ ] Offline mode works (PWA)
+  </Step>
+</Steps>
+
+## Continuous Deployment
+
+Set up automatic deployments on push:
+
+### GitHub Actions + Vercel
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm install
+      - run: npm run test
+      - run: npm run build
+      - uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+## Monitoring
+
+After deployment, monitor:
+
+### 1. Analytics
+
+Add privacy-respecting analytics:
+
+```typescript
+// app/layout.tsx
+import Script from 'next/script';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <head>
+        <Script
+          src="https://analytics.example.com/script.js"
+          strategy="afterInteractive"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+### 2. Error Tracking
+
+Monitor client-side errors:
+
+```typescript
+// app/layout.tsx
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    // Send to error tracking service
+  });
+}
+```
+
+### 3. Performance Monitoring
+
+Track Core Web Vitals:
+
+```typescript
+// app/layout.tsx
+import { sendToAnalytics } from './analytics';
+
+export function reportWebVitals(metric) {
+  sendToAnalytics(metric);
+}
+```
+
+## Rollback Strategy
+
+If a deployment breaks:
+
+<Steps>
+  <Step title="Vercel: Instant Rollback">
+    In Vercel dashboard:
+    1. Go to Deployments
+    2. Find previous working deployment
+    3. Click "Promote to Production"
+  </Step>
+
+  <Step title="Other platforms: Redeploy">
+    ```bash
+    git revert HEAD
+    git push
+    # Redeploy previous commit
+    ```
+  </Step>
+
+  <Step title="Fix and redeploy">
+    1. Identify the issue
+    2. Fix in a new branch
+    3. Test thoroughly
+    4. Deploy via PR/merge
+  </Step>
+</Steps>
+
+## Security Considerations
+
+- **CSP Headers**: Configured in `vercel.json` to prevent XSS
+- **HTTPS Only**: Enforced by hosting platform
+- **No Secrets**: All processing is client-side
+- **Subresource Integrity**: Consider adding SRI hashes for CDN resources
+- **Dependency Scanning**: GitHub Dependabot monitors for vulnerabilities
+
+<Warning>
+  Never deploy with failing tests or security audit warnings. Run `npm run test` and `npm run audit` before every deployment.
+</Warning>
+
+## Next Steps
+
+- Review [local setup guide](/development/local-setup)
+- Learn about [adding tools](/development/adding-tools)
+- Understand [testing strategy](/development/testing)
+- Monitor deployment health and performance

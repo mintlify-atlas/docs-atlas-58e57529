@@ -1,0 +1,164 @@
+---
+title: JS Beautify/Minify
+description: Format or minify JavaScript and TypeScript with indentation and Terser
+---
+
+# JS Beautify/Minify
+
+Format or minify JavaScript and TypeScript code. Beautify adds indentation; minify uses Terser for production-ready compression.
+
+## Overview
+
+The JS Beautify/Minify tool provides:
+- **Beautify** — Basic indentation (2 spaces) for readability
+- **Minify** — Terser minification with compression and mangling
+
+Supports ES6+, TypeScript, JSX, and modern JavaScript syntax.
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Code formatting" icon="code">
+    Standardize JavaScript indentation for team consistency
+  </Card>
+  <Card title="Production builds" icon="rocket">
+    Minify JavaScript for deployment to reduce bundle size
+  </Card>
+  <Card title="Debugging minified code" icon="bug">
+    Beautify vendor libraries or CDN scripts for inspection
+  </Card>
+  <Card title="Bundle optimization" icon="gauge-high">
+    Compress JavaScript with variable mangling and dead code elimination
+  </Card>
+</CardGroup>
+
+## Actions
+
+<Tabs>
+  <Tab title="Beautify">
+    Adds basic indentation (2 spaces). Uses a simple algorithm that normalizes braces and semicolons.
+    
+    **Input:**
+    ```javascript
+    function greet(name){return `Hello, ${name}!`;}
+    ```
+    
+    **Output:**
+    ```javascript
+    function greet(name) {
+      return `Hello, ${name}!`;
+    }
+    ```
+    
+    <Note>
+      The beautifier is regex-based and best-effort. For advanced formatting, use Prettier or ESLint.
+    </Note>
+  </Tab>
+  
+  <Tab title="Minify">
+    Uses [Terser](https://terser.org/) for production-grade minification with compression and mangling.
+    
+    **Input:**
+    ```javascript
+    function greet(name) {
+      return `Hello, ${name}!`;
+    }
+    console.log(greet('World'));
+    ```
+    
+    **Output:**
+    ```javascript
+    function greet(o){return`Hello, ${o}!`}console.log(greet("World"));
+    ```
+    
+    <Tip>
+      Terser removes dead code, shortens variable names, and collapses whitespace.
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Implementation Details
+
+### Beautify Algorithm
+
+1. Normalize braces and semicolons to create line breaks
+2. Split by newlines and track indentation depth
+3. Increase indent after `{`, decrease before `}`
+4. Join with 2-space indentation per level
+
+**Source:** `lib/tools/engine.ts:272-298`
+
+```typescript Key logic
+function beautifyJs(js: string): string {
+  const result: string[] = [];
+  let indent = 0;
+
+  const normalized = js
+    .replace(/\s*\{\s*/g, ' {\n')
+    .replace(/\s*\}\s*/g, '\n}\n')
+    .replace(/;\s*/g, ';\n')
+    .replace(/\n{2,}/g, '\n');
+
+  for (const line of normalized.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.startsWith('}')) {
+      indent = Math.max(0, indent - 1);
+      result.push('  '.repeat(indent) + trimmed);
+    } else if (trimmed.endsWith('{')) {
+      result.push('  '.repeat(indent) + trimmed);
+      indent++;
+    } else {
+      result.push('  '.repeat(indent) + trimmed);
+    }
+  }
+  return result.join('\n');
+}
+```
+
+### Minify (Terser)
+
+The minify action imports and runs Terser with compression and mangling enabled.
+
+**Source:** `lib/tools/engine.ts:536-542`
+
+```typescript Key logic
+if (action === 'minify') {
+  const { minify: terserMinifySync } = await import('terser');
+  const out = await terserMinifySync(input, { compress: true, mangle: true });
+  return { output: out.code || '' };
+}
+```
+
+<Warning>
+  Minification is **lossy** — variable names are mangled, comments are removed, and whitespace is stripped. Always keep unminified source files.
+</Warning>
+
+## Terser Options
+
+The tool uses default Terser options:
+- **`compress: true`** — Dead code elimination, constant folding, expression simplification
+- **`mangle: true`** — Shorten variable and function names
+
+For custom Terser configurations, modify the source code or use the Terser CLI.
+
+## Keyboard Shortcuts
+
+- `Cmd/Ctrl+Enter` — Beautify (default)
+- `Cmd/Ctrl+Shift+C` — Copy output
+- `Cmd/Ctrl+Shift+S` — Download output
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="HTML Beautify/Minify" href="/tools/html-beautify" icon="code">
+    Format or minify HTML markup
+  </Card>
+  <Card title="JSON Format/Validate" href="/tools/json-format-validate" icon="brackets-curly">
+    Validate and format JSON
+  </Card>
+  <Card title="CSS Beautify/Minify" href="/tools/css-beautify" icon="paintbrush">
+    Format or minify CSS stylesheets
+  </Card>
+</CardGroup>

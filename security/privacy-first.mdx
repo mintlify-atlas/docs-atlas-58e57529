@@ -1,0 +1,292 @@
+---
+title: Privacy-First Architecture
+description: How Kayston's Forge ensures complete data privacy through client-side processing with zero server transmission
+---
+
+## Zero Server Transmission
+
+Kayston's Forge is built with privacy as a foundational principle. Unlike traditional web applications that send your data to remote servers for processing, every transformation, validation, and conversion happens entirely in your browser.
+
+<Note>
+  Your data never leaves your device. All processing is performed locally using JavaScript running in your browser.
+</Note>
+
+## Client-Side Processing Architecture
+
+The application is built as a **fully static site** using Next.js 14 with `output: 'export'`. This architectural choice has critical privacy implications:
+
+### Static Export Benefits
+
+- **No Server Runtime**: The application consists only of HTML, CSS, and JavaScript files served as static assets
+- **No Backend APIs**: There are no server-side API routes that could receive or process your data
+- **No Database Connections**: The application does not connect to any remote databases or storage services
+- **No Analytics Tracking**: No user behavior tracking, session recording, or third-party analytics scripts
+
+```javascript
+// Next.js configuration enforcing static export
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export',  // Forces fully static build
+  images: {
+    unoptimized: true  // No image optimization server
+  }
+}
+```
+
+## Local State Management
+
+All application state and user data is managed locally using browser-native storage APIs:
+
+### IndexedDB for Tool History
+
+Tool execution history is stored in your browser's IndexedDB using Dexie:
+
+```typescript
+// lib/db.ts - Local database schema
+import Dexie, { type EntityTable } from 'dexie'
+
+export const db = new Dexie('KaystonsForgeDB') as Dexie & {
+  history: EntityTable<HistoryEntry, 'id'>
+  favorites: EntityTable<FavoriteEntry, 'id'>
+  settings: EntityTable<SettingEntry, 'key'>
+}
+
+db.version(1).stores({
+  history: '++id, toolId, timestamp',
+  favorites: '++id, toolId, timestamp',
+  settings: 'key'
+})
+```
+
+<Warning>
+  History is capped at 50 entries per tool and is stored only on your device. Clearing your browser data will permanently delete this history.
+</Warning>
+
+### localStorage for UI State
+
+Application preferences (theme, sidebar state, etc.) are persisted to `localStorage` as `kaystons-forge-ui`:
+
+```typescript
+// lib/store.ts - UI state using Zustand
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export const useAppStore = create(
+  persist(
+    (set) => ({
+      sidebarOpen: true,
+      activeTool: 'json-format-validate',
+      // ... other UI state
+    }),
+    {
+      name: 'kaystons-forge-ui',
+      storage: createJSONStorage(() => localStorage)
+    }
+  )
+)
+```
+
+## Tool Processing Flow
+
+Every tool follows the same privacy-preserving flow:
+
+1. **Input**: User enters data into the browser textarea
+2. **Processing**: JavaScript engine executes transformation logic locally
+3. **Output**: Result is displayed in the browser and optionally saved to IndexedDB
+4. **No Network**: Zero HTTP requests are made during tool execution
+
+```typescript
+// lib/tools/engine.ts - Synchronous client-side processing
+export function processTool(
+  toolId: string,
+  input: string,
+  options?: Record<string, unknown>
+): ToolResult {
+  // Large switch statement routes to local transformation logic
+  switch (toolId) {
+    case 'json-format-validate':
+      return formatJSON(input, options)
+    case 'base64-encode':
+      return encodeBase64(input)
+    // ... 45 more tools, all client-side
+  }
+}
+```
+
+<Note>
+  All tool dependencies (crypto-js, terser, papaparse, js-yaml, etc.) are bundled into the static JavaScript and execute entirely in your browser.
+</Note>
+
+## Progressive Web App Offline Support
+
+The application includes a service worker that enables offline functionality:
+
+```javascript
+// public/sw.js - Service worker for offline caching
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS)
+    })
+  )
+})
+```
+
+This service worker:
+- Caches static assets locally for offline use
+- Does **not** transmit any user data
+- Runs entirely in your browser's isolated worker context
+
+## Privacy Guarantees
+
+<Warning>
+  No authentication, no cloud sync, no data transmission. This is a deliberate architectural choice prioritizing privacy over convenience features.
+</Warning>
+
+### What We Don't Collect
+
+- No user accounts or login credentials
+- No input data from any tool
+- No tool usage analytics or telemetry
+- No IP addresses or device fingerprints
+- No cookies (except localStorage for UI preferences)
+- No third-party scripts or tracking pixels
+
+### What Stays Local
+
+- All tool inputs and outputs
+- Tool execution history (max 50 per tool)
+- Favorite tools list
+- Application settings and preferences
+- Service worker cache
+
+## Verifying Privacy Claims
+
+You can independently verify these privacy guarantees:
+
+### 1. Network Inspection
+
+Open your browser's Developer Tools (F12) and navigate to the Network tab. Execute any tool and observe that **no XHR or fetch requests are made** during processing.
+
+### 2. Source Code Audit
+
+The entire application source code is available at [github.com/kaystons/forge](https://github.com/kaystons/forge). Key files to review:
+
+- `lib/tools/engine.ts` - All tool processing logic (synchronous, no network calls)
+- `next.config.js` - Static export configuration
+- `lib/db.ts` - IndexedDB schema (local storage only)
+- `lib/store.ts` - Zustand state management (localStorage only)
+
+### 3. Static Build Output
+
+The production build consists only of:
+- Static HTML files (one per tool route)
+- JavaScript bundles (all tool dependencies bundled)
+- CSS stylesheets
+- Static assets (fonts, icons, manifest)
+
+No server-side code is deployed. The application is hosted on Vercel's edge CDN as static files.
+
+## Comparison to Server-Based Tools
+
+| Feature | Kayston's Forge | Traditional Web Tools |
+|---------|----------------|----------------------|
+| Data transmission | None | All data sent to server |
+| Processing location | Your browser | Remote server |
+| Data retention | Your device only | Server logs, databases |
+| Offline functionality | Full (via PWA) | None |
+| Privacy audit | View source, inspect network | Trust provider |
+| Third-party dependencies | Bundled locally | Often server-side |
+
+## Known Trade-Offs
+
+<Warning>
+  This privacy-first architecture means certain features are **intentionally absent**:
+</Warning>
+
+- **No cloud sync**: Your history and favorites don't sync across devices
+- **No collaborative features**: No shared workspaces or team tools
+- **No server-side features**: No scheduled tasks, webhooks, or integrations
+- **No usage analytics**: We can't improve tools based on usage patterns
+
+These are **deliberate design decisions** to ensure zero data transmission. If you need these features, you must use a server-based tool and trust the provider.
+
+## Deployment Architecture
+
+The static site is deployed on Vercel's edge network:
+
+```json
+// vercel.json - Static hosting configuration
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        // Security headers only - no tracking or analytics
+      ]
+    }
+  ]
+}
+```
+
+Vercel serves the static files via their CDN. No Vercel serverless functions or edge functions are deployed. The hosting platform:
+
+- Serves static assets only
+- Applies security headers (see [HTTP Security Headers](/security/headers))
+- Does not execute any server-side code
+- Does not log request payloads
+
+<Note>
+  Vercel may log standard CDN access logs (timestamp, URL, status code, user agent) for operational purposes. These logs do **not** contain any tool input or output data.
+</Note>
+
+## Security Implications
+
+The privacy-first architecture also provides security benefits:
+
+### Attack Surface Reduction
+
+- **No server-side vulnerabilities**: SQL injection, RCE, SSRF, etc. are impossible
+- **No credential theft**: There are no passwords or API keys to steal
+- **No data breaches**: There is no centralized data store to compromise
+
+### Client-Side Security Responsibilities
+
+Because all processing is client-side, security depends on:
+
+1. **Browser security**: Use an up-to-date browser with security patches
+2. **Device security**: Your local storage is only as secure as your device
+3. **Network security**: Use HTTPS to prevent MITM attacks on static asset delivery
+
+<Warning>
+  If your device is compromised (malware, physical access), an attacker could access your IndexedDB history and localStorage. This is true for all client-side applications.
+</Warning>
+
+## Progressive Enhancement
+
+The application follows progressive enhancement principles:
+
+- **Core functionality**: Works without JavaScript (static HTML fallback)
+- **Enhanced functionality**: Full tool suite with JavaScript enabled
+- **PWA features**: Install prompt and offline support with service worker
+
+This ensures the widest possible compatibility while maintaining privacy guarantees at every level.
+
+## Future Privacy Enhancements
+
+Potential future privacy improvements under consideration:
+
+- **Memory clearing**: Explicit tool to securely clear all local data
+- **Incognito mode**: Session-only storage with no persistence
+- **Export/import**: Encrypted backup of history and favorites
+- **Ephemeral URLs**: Share tool outputs via client-side encrypted URLs
+
+These features would maintain the zero-transmission architecture while adding user convenience.
+
+## Conclusion
+
+Kayston's Forge demonstrates that powerful developer tools can be built without sacrificing user privacy. By leveraging modern web platform APIs (IndexedDB, Service Workers, ES Modules) and committing to a fully static architecture, we eliminate entire classes of privacy and security risks.
+
+<Note>
+  If you have questions about our privacy architecture or want to verify our claims, please examine the source code at [github.com/kaystons/forge](https://github.com/kaystons/forge) or contact us at security@kaystons.dev.
+</Note>

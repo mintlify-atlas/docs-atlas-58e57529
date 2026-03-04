@@ -1,0 +1,377 @@
+---
+title: Privacy & Security Architecture
+description: Understand Kayston's Forge's privacy-first architecture, client-side processing model, security headers, and why your data never leaves your browser.
+---
+
+## Privacy-First Philosophy
+
+Kayston's Forge is built on a foundational principle: **your data is yours alone**. Every tool runs entirely in your browser with zero server-side processing.
+
+## Core Architecture
+
+### Fully Static Export
+
+Kayston's Forge is built with Next.js 14 using `output: 'export'`, which generates a completely static site:
+
+- No Node.js server runtime
+- No API routes that process data
+- No server-side rendering of your input
+- No backend database or logging
+
+**What this means for you:**
+
+<Check>
+Even the hosting provider (Vercel) cannot intercept, log, or access the data you process in Kayston's Forge.
+</Check>
+
+### Client-Side Processing
+
+All 47 tools process data using JavaScript running in your browser:
+
+```typescript
+// Example: Hash generation runs locally
+import CryptoJS from 'crypto-js';
+
+const hash = CryptoJS.SHA256(yourInput).toString();
+// ^ This computation happens in your browser's JavaScript engine
+// No network request is made
+```
+
+**Network Activity**: The only network requests are:
+1. Initial page load (HTML, CSS, JavaScript bundles)
+2. Font and icon assets from the same domain
+3. Service worker for offline PWA functionality (optional)
+
+<Warning>
+Kayston's Forge NEVER transmits your input data, output results, or processing history to external servers.
+</Warning>
+
+## Security Headers
+
+Every page is served with strict security headers enforced via `vercel.json`:
+
+### Content Security Policy (CSP)
+
+```http
+Content-Security-Policy: 
+  default-src 'self'; 
+  script-src 'self' 'unsafe-inline'; 
+  style-src 'self' 'unsafe-inline'; 
+  img-src 'self' data: blob:; 
+  font-src 'self'; 
+  connect-src 'self'; 
+  worker-src 'self'; 
+  frame-src 'self' blob:; 
+  frame-ancestors 'none'; 
+  object-src 'none'; 
+  base-uri 'self';
+```
+
+**What this protects against:**
+- External scripts cannot be loaded from CDNs or third-party domains
+- Connections are restricted to the same origin
+- Iframes cannot embed Kayston's Forge (clickjacking protection)
+- No Flash, Java, or plugin content allowed
+
+<Note>
+`script-src 'unsafe-inline'` is required for Next.js static export hydration. XSS protection relies on React's built-in escaping and DOMPurify sanitization for previews.
+</Note>
+
+### HTTP Strict Transport Security (HSTS)
+
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+Forces HTTPS for all connections for 1 year, including subdomains.
+
+### Other Security Headers
+
+**X-Content-Type-Options: nosniff**
+- Prevents MIME type sniffing attacks
+
+**X-Frame-Options: DENY**
+- Prevents the site from being embedded in iframes (defense against clickjacking)
+
+**Referrer-Policy: strict-origin-when-cross-origin**
+- Limits referrer information leakage when navigating to external sites
+
+**Permissions-Policy**
+```http
+Permissions-Policy: camera=(), microphone=(), geolocation=(), 
+                     payment=(), usb=(), magnetometer=(), accelerometer=()
+```
+- Disables access to sensitive device APIs
+
+## Data Storage
+
+### Local Storage (Optional)
+
+Kayston's Forge uses browser storage for convenience features:
+
+**IndexedDB** (`KaystonsForgeDB` via Dexie)
+- Per-tool history (last 50 operations per tool)
+- Favorites
+- User settings (theme, keyboard shortcuts)
+
+**localStorage**
+- UI state (sidebar open/closed, active tool)
+
+This data:
+- Never leaves your device
+- Can be cleared at any time via browser settings or the app's settings panel
+- Is not synchronized to cloud storage
+- Is not accessible to other websites (same-origin policy)
+
+<Tip>
+To completely clear all Kayston's Forge data:
+1. Open browser DevTools (F12)
+2. Go to Application > Storage
+3. Click "Clear site data" for `kaystonsforge.com`
+</Tip>
+
+### No Cookies
+
+Kayston's Forge does not use cookies for tracking, authentication, or analytics.
+
+### No Analytics
+
+Unlike most web applications, Kayston's Forge has:
+- No Google Analytics
+- No Mixpanel, Segment, or similar tracking
+- No heatmaps or session replay
+- No error tracking services (like Sentry) that send data externally
+
+We cannot see:
+- Which tools you use
+- What data you process
+- When you visit the site
+- Where you're located
+
+## Sandboxed Previews
+
+Tools that render user-provided HTML (HTML Preview, Markdown Preview) use sandboxed iframes:
+
+```html
+<iframe 
+  sandbox="allow-scripts allow-same-origin"
+  srcdoc="[sanitized content]"
+></iframe>
+```
+
+**Protection layers:**
+1. **DOMPurify sanitization** - Strips dangerous HTML/JavaScript
+2. **iframe sandbox** - Isolates rendering context
+3. **Blob URLs** - Content is never assigned a real origin
+
+<Warning>
+Even with sanitization, never paste HTML from untrusted sources. Always review user-generated HTML before rendering.
+</Warning>
+
+## Cryptographic Operations
+
+Cryptographic tools use battle-tested libraries:
+
+- **Hashing**: `crypto-js` (MD5, SHA-1, SHA-256, SHA-512, HMAC)
+- **Random generation**: `crypto.getRandomValues()` (Web Crypto API)
+- **JWT decoding**: `jwt-decode` (decode-only, no signature verification)
+- **UUID/ULID**: `uuid`, `ulidx` (standardized implementations)
+
+<Note>
+The Hash Generator and JWT Debugger do not perform cryptographic verification. They are for inspection and development purposes only.
+</Note>
+
+## Threat Model
+
+### What Kayston's Forge Protects Against
+
+<Check>
+**Data exfiltration** - No code in the app transmits your data externally
+</Check>
+
+<Check>
+**Server-side logging** - Static architecture means no server can log requests
+</Check>
+
+<Check>
+**Third-party tracking** - No analytics, ads, or tracking pixels
+</Check>
+
+<Check>
+**Man-in-the-middle attacks** - HSTS forces HTTPS with certificate pinning
+</Check>
+
+### What Kayston's Forge Does NOT Protect Against
+
+<Warning>
+**Compromised device** - If your computer has malware, all browser activity is vulnerable
+</Warning>
+
+<Warning>
+**Browser extensions** - Malicious extensions can read page content and input
+</Warning>
+
+<Warning>
+**Malicious input** - Pasting malicious code can exploit browser vulnerabilities (use sanitized previews)
+</Warning>
+
+<Warning>
+**Physical access** - Someone with access to your device can view browser history and IndexedDB
+</Warning>
+
+## Security Auditing
+
+Kayston's Forge uses automated security scanning:
+
+### GitHub Actions Security Workflow
+
+**CodeQL SAST** (`.github/workflows/security.yml`)
+- Semantic code analysis for JavaScript/TypeScript
+- Detects SQL injection, XSS, path traversal, and other vulnerabilities
+- Runs on every push and pull request
+
+**npm audit**
+- Scans dependencies for known vulnerabilities
+- CI fails on CRITICAL severity issues
+- HIGH severity issues are reviewed (some may not apply to static export)
+
+**TruffleHog Secret Scanning**
+- Detects accidentally committed API keys, tokens, and credentials
+- Scans entire git history
+- Prevents sensitive data from entering version control
+
+**Dependency Updates**
+- Dependabot configured for weekly updates
+- GitHub Actions versions auto-updated
+- Security patches applied within 7 days of disclosure
+
+### SBOM (Software Bill of Materials)
+
+Every release includes a CycloneDX SBOM listing all dependencies (`.github/workflows/sbom.yml`).
+
+## Vulnerability Disclosure
+
+Kayston's Forge follows responsible disclosure practices:
+
+**Security Policy**: `public/.well-known/security.txt` (RFC 9116)
+
+```text
+Contact: security@kaystonsforge.com
+Expires: 2026-12-31T23:59:59Z
+Preferred-Languages: en
+```
+
+**Incident Response Plan**: `docs/INCIDENT_RESPONSE.md`
+
+If you discover a security vulnerability:
+1. Email `security@kaystonsforge.com` with details
+2. Do not publicly disclose until patch is released
+3. You will receive acknowledgment within 48 hours
+4. Critical issues are patched within 7 days
+
+## Known Accepted Risks
+
+### `script-src 'unsafe-inline'` in CSP
+
+**Why it exists:**
+Next.js 14 with `output: 'export'` inlines a small hydration bootstrap script that cannot be hashed or nonced without a custom server runtime.
+
+**Mitigation:**
+- React's default output escaping prevents XSS in `{expression}` interpolations
+- DOMPurify sanitizes all HTML rendered via `dangerouslySetInnerHTML`
+- Preview panes use sandboxed iframes with Blob URLs
+
+**Future improvement:**
+If Kayston's Forge ever adopts a server runtime (SSR or ISR), this can be replaced with a nonce-based CSP.
+
+## Comparison to SaaS Alternatives
+
+| Feature | Kayston's Forge | Typical SaaS Tool |
+|---------|----------------|-------------------|
+| Data transmission | None | Sent to server |
+| Server-side logging | Impossible (no server) | Common |
+| Third-party analytics | None | Google Analytics, etc. |
+| Data retention | Local only | 30-90 days typical |
+| GDPR compliance | N/A (no data collected) | Requires privacy policy |
+| Offline functionality | Full (PWA) | None or limited |
+| Trust requirements | Trust your browser | Trust provider, server, cloud |
+
+<Check>
+With Kayston's Forge, you don't need to trust us with your data — because we never have access to it.
+</Check>
+
+## Security Best Practices for Users
+
+**Use HTTPS**
+
+Always access Kayston's Forge via `https://` (HSTS enforces this after first visit).
+
+**Keep Browser Updated**
+
+Client-side security relies on your browser's JavaScript sandbox. Use the latest version of Chrome, Firefox, Safari, or Edge.
+
+**Review Browser Extensions**
+
+Browser extensions can read all page content. Disable unnecessary extensions when processing sensitive data.
+
+**Clear History for Sensitive Data**
+
+If you process confidential data, clear browser history and IndexedDB after use:
+- History is per-tool and limited to 50 entries
+- Settings > Clear All History
+
+**Use Incognito/Private Mode**
+
+For maximum privacy, use Kayston's Forge in incognito/private browsing mode. History and settings will not persist after closing.
+
+**Validate Outputs**
+
+For security-critical operations (JWT verification, certificate validation), use Kayston's Forge for inspection only. Always verify signatures and chains using production-grade tools.
+
+## Open Source Transparency
+
+Kayston's Forge source code is available for audit:
+
+- **Repository**: [github.com/yourusername/kaystonsforge](https://github.com/yourusername/kaystonsforge)
+- **License**: MIT
+- **Dependencies**: Listed in `package.json` with exact versions
+
+<Note>
+You can clone the repository, audit the code, and build your own version from source if you require additional assurance.
+</Note>
+
+## Compliance
+
+**GDPR** - Not applicable (no personal data collected)
+
+**CCPA** - Not applicable (no personal data sold)
+
+**HIPAA** - Not covered (no backend, but client-side use does not create a HIPAA relationship)
+
+**SOC 2** - Not applicable (no service provider, no data custody)
+
+<Tip>
+Because Kayston's Forge has no backend and collects no data, it does not fall under most privacy regulations. However, always consult your organization's compliance team before using any web tool with sensitive data.
+</Tip>
+
+## Summary
+
+<CardGroup cols={2}>
+  <Card title="Zero Data Transmission" icon="shield-check">
+    All 47 tools process data locally in your browser. No input or output is sent to external servers.
+  </Card>
+  
+  <Card title="No Analytics or Tracking" icon="eye-slash">
+    No cookies, no analytics, no session replay, no fingerprinting. We cannot see what you do.
+  </Card>
+  
+  <Card title="Static Architecture" icon="lock-closed">
+    Fully static Next.js export means no server can log, inspect, or intercept your data.
+  </Card>
+  
+  <Card title="Battle-Tested Security" icon="check-badge">
+    Strict CSP, HSTS, automated SAST, secret scanning, and dependency audits on every commit.
+  </Card>
+</CardGroup>
+
+**Your data is yours. Always.**
